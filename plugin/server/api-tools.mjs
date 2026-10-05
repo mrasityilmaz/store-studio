@@ -1,9 +1,9 @@
 // Generic tools over the whole App Store Connect and Google Play APIs:
 // reference lookup, reads, and confirmed writes. No code is executed.
-import { mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import { CONFIRM, accounts, accountsFile, asc, ascAccountNames, ascForApp, play, playAccountNames, playForPackage } from './clients.mjs';
+import { CONFIRM, asc, ascAccountNames, ascForApp, play, playAccountNames, playForPackage } from './clients.mjs';
 import { ascDocs, ascFindOperation, ascLinkageTypes, ascParam, ascSpec, playDiscovery, playDocs, playFindMethod } from './docs.mjs';
 import { HOST as PLAY_HOST } from './play.mjs';
 import { StoreError, assertHost, assertPlainPath, dataDir, fetchRetry } from './util.mjs';
@@ -18,7 +18,7 @@ const ACCOUNT = {
 async function ascClientFor(path, account) {
   const names = ascAccountNames();
   if (account || names.length <= 1) return asc(account);
-  const appId = path.replace(/^https:\/\/[^/]+/, '').match(/^\/v\d+\/apps\/(\d+)(?:[/?]|$)/)?.[1];
+  const appId = path.replace(/^https:\/\/api\.appstoreconnect\.apple\.com/, '').match(/^\/v\d+\/apps\/(\d+)(?:[/?]|$)/)?.[1];
   if (appId) return (await ascForApp(appId)).client;
   throw new StoreError(`Several App Store Connect accounts are set up (${names.join(', ')}); pass account. asc_apps shows which account has which app.`);
 }
@@ -80,27 +80,10 @@ function blocked(list, path) {
 
 const impact = (list, path, body) => list.map(([re, f]) => re.test(path) && f(body)).filter(Boolean);
 
-const real = (file) => realpath(file).catch(() => resolve(file));
-
-// Key files and the accounts file are never read as a body or written over.
-async function assertNotKeyFile(file) {
-  let configured = [];
-  try {
-    const all = accounts();
-    configured = [
-      ...Object.values(all.asc).map((a) => a.keyPath),
-      ...Object.values(all.play).map((a) => a.serviceAccountPath),
-      accountsFile(),
-    ];
-  } catch {}
-  const path = await real(file);
-  const keys = await Promise.all(configured.filter(Boolean).map(real));
-  if (/\.p8$/i.test(path) || keys.includes(path)) {
-    throw new StoreError(`${file} is a key or accounts file; store-studio never sends, shows or overwrites those.`);
-  }
-}
-
 const PRIVATE_KEY = /-----BEGIN [A-Z ]*PRIVATE KEY-----|"private_key"\s*:/;
+const KEY_FILE = /\.(p8|pem|key)$/i;
+const keyFileError = (file) =>
+  new StoreError(`${file} is a key file; store-studio never sends, shows or overwrites key files.`);
 
 // The body from body or body_file. Key material is refused, and errors never
 // quote the file, so a wrong path can't put a key into the conversation.
@@ -108,7 +91,7 @@ async function readBody({ body, body_file }) {
   let payload = body;
   if (body_file) {
     if (!isAbsolute(body_file)) throw new StoreError('body_file must be an absolute path');
-    await assertNotKeyFile(body_file);
+    if (KEY_FILE.test(body_file)) throw keyFileError(body_file);
     let text;
     try {
       text = await readFile(body_file, 'utf8');
@@ -131,9 +114,12 @@ async function readBody({ body, body_file }) {
 async function target(save_to, overwrite, fallbackName) {
   const file = save_to ?? join(dataDir(), 'downloads', `${new Date().toISOString().replace(/[:.]/g, '-')}-${fallbackName}`);
   if (!isAbsolute(file)) throw new StoreError('save_to must be an absolute path');
-  await assertNotKeyFile(file);
-  if (!overwrite && (await stat(file).catch(() => null))) {
-    throw new StoreError(`${file} already exists; pass overwrite: true or pick another path`);
+  if (KEY_FILE.test(file)) throw keyFileError(file);
+  const existing = await stat(file).catch(() => null);
+  if (existing) {
+    if (!overwrite) throw new StoreError(`${file} already exists; pass overwrite: true or pick another path`);
+    // A key saved under another name is still never written over.
+    if (!existing.isFile() || (existing.size < 65536 && PRIVATE_KEY.test(await readFile(file, 'utf8')))) throw keyFileError(file);
   }
   await mkdir(dirname(file), { recursive: true });
   return file;

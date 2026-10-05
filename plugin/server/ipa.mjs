@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { SETUP_HINT, accounts, ascForApp } from './clients.mjs';
-import { StoreError } from './util.mjs';
+import { StoreError, pemKey } from './util.mjs';
 
 const exec = promisify(execFile);
 
@@ -27,15 +27,28 @@ async function xcrun() {
   return path;
 }
 
-// The account that can see the app inside the IPA, with its key file.
+// The account that can see the app inside the IPA, with its key.
 async function credentials(bundleId, account) {
   const { account: name } = await ascForApp(bundleId, account);
-  const { keyId, issuerId, keyPath } = accounts().asc[name];
-  const missing = [!keyId && 'key ID', !issuerId && 'issuer ID', !keyPath && 'private key path'].filter(Boolean);
+  const { keyId, issuerId, privateKey } = accounts().asc[name];
+  const missing = [!keyId && 'key ID', !issuerId && 'issuer ID', !privateKey && 'private key'].filter(Boolean);
   if (missing.length) {
     throw new StoreError(`App Store Connect account "${name}" is missing its ${missing.join(', ')}. ${SETUP_HINT}`);
   }
-  return { account: name, keyId, issuerId, keyPath };
+  return { account: name, keyId, issuerId, privateKey };
+}
+
+// altool only reads keys from files: a copy in a fresh folder only this user
+// can open, deleted as soon as altool exits.
+async function withKeyFile(creds, fn) {
+  const dir = await mkdtemp(join(tmpdir(), 'store-studio-'));
+  try {
+    const file = join(dir, `AuthKey_${creds.keyId}.p8`);
+    await writeFile(file, pemKey(creds.privateKey, `The App Store Connect private key for key ID ${creds.keyId}`), { mode: 0o600 });
+    return await fn(file);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 // Payload/*.app/Info.plist, whichever app is inside the archive.
@@ -119,7 +132,7 @@ function rejectUpload(path, output) {
   throw new StoreError(explained.message, lines);
 }
 
-function altoolArgs(ipa, { keyId, issuerId, keyPath }) {
+function altoolArgs(ipa, { keyId, issuerId }, keyPath) {
   return [
     'altool',
     '--upload-app',
@@ -156,10 +169,9 @@ export async function uploadIpa(ipa, { dryRun = true, account } = {}) {
   let stdout = '';
   let stderr = '';
   try {
-    const result = await exec(bin, altoolArgs(identity.path, creds), {
-      timeout: 20 * 60 * 1000,
-      maxBuffer: 8_000_000,
-    });
+    const result = await withKeyFile(creds, (keyFile) =>
+      exec(bin, altoolArgs(identity.path, creds, keyFile), { timeout: 20 * 60 * 1000, maxBuffer: 8_000_000 }),
+    );
     stdout = result.stdout;
     stderr = result.stderr;
   } catch (err) {

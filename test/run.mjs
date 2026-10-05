@@ -4,12 +4,12 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { makeTree } from './fixtures.mjs';
-import { imageInfo } from '../server/image.mjs';
-import { explainAltool, macOnlyReason } from '../server/ipa.mjs';
-import { scanAsc, scanPlay } from '../server/scan.mjs';
+import { imageInfo } from '../plugin/server/image.mjs';
+import { explainAltool, macOnlyReason } from '../plugin/server/ipa.mjs';
+import { scanAsc, scanPlay } from '../plugin/server/scan.mjs';
 
-// Tests never read the real accounts file.
-process.env.STORE_STUDIO_ACCOUNTS = join(mkdtempSync(join(tmpdir(), 'store-studio-noacc-')), 'accounts.json');
+// Tests start with no store accounts; each file sets the ones it needs.
+for (const name of Object.keys(process.env)) if (/^(ASC|PLAY)_/.test(name)) delete process.env[name];
 
 const tmp = mkdtempSync(join(tmpdir(), 'store-studio-scan-'));
 makeTree(tmp, {
@@ -67,4 +67,3 @@ await import('./mock-stores.mjs');
 await import('./api-tools.mjs');
 await import('./hardening.mjs');
 await import('./accounts.mjs');
-await import('./account-add.mjs');

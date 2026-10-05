@@ -1,0 +1,167 @@
+{
+  "name": "store-studio",
+  "version": "0.6.0",
+  "description": "Manage App Store Connect and Google Play from Claude Code: upload, reorder and download screenshots for every locale and device, edit store text, upload builds (.ipa on a Mac, .aab anywhere) with staged rollouts, manage TestFlight, and reach every other endpoint of both official APIs (versions, review submissions, phased releases, pricing, reviews, analytics and sales reports, tracks, Data safety) through reference lookup, reads and confirmed writes. Up to three App Store Connect teams and three Play accounts, set up in the plugin settings with your own API keys; keys stay in your system's secure storage.",
+  "author": {
+    "name": "Muhammed Raşit Yılmaz",
+    "url": "https://github.com/mrasityilmaz"
+  },
+  "homepage": "https://github.com/mrasityilmaz/store-studio",
+  "repository": "https://github.com/mrasityilmaz/store-studio",
+  "license": "MIT",
+  "keywords": [
+    "app-store-connect",
+    "google-play",
+    "play-console",
+    "screenshots",
+    "store-listing",
+    "aso",
+    "localization",
+    "ios",
+    "android",
+    "mobile"
+  ],
+  "icon": "./.claude-plugin/icon.png",
+  "documentationUrl": "https://github.com/mrasityilmaz/store-studio/tree/main/plugin#readme",
+  "supportUrl": "https://github.com/mrasityilmaz/store-studio/issues",
+  "privacyPolicyUrl": "https://github.com/mrasityilmaz/store-studio/blob/main/plugin/PRIVACY.md",
+  "userConfig": {
+    "app_store_key_id": {
+      "type": "string",
+      "title": "App Store Connect: key ID",
+      "description": "Key ID of a Team API key (App Store Connect > Users and Access > Integrations > App Store Connect API). The App Manager role covers listings, screenshots, versions, builds and TestFlight.",
+      "default": ""
+    },
+    "app_store_issuer_id": {
+      "type": "string",
+      "title": "App Store Connect: issuer ID",
+      "description": "The Issuer ID shown above the keys list on the same page.",
+      "default": ""
+    },
+    "app_store_private_key": {
+      "type": "string",
+      "title": "App Store Connect: private key",
+      "description": "Open the AuthKey_XXXXXXXXXX.p8 file you downloaded in a text editor, copy all of it (including the BEGIN and END lines) and paste it here. It is kept in your system's secure storage.",
+      "sensitive": true
+    },
+    "app_store_name": {
+      "type": "string",
+      "title": "App Store Connect: account name (optional)",
+      "description": "A short name for this team, such as acme, so you can tell accounts apart.",
+      "default": ""
+    },
+    "app_store_2_key_id": {
+      "type": "string",
+      "title": "App Store Connect account 2: key ID",
+      "description": "Key ID of a Team API key (App Store Connect > Users and Access > Integrations > App Store Connect API). The App Manager role covers listings, screenshots, versions, builds and TestFlight. Only if you have another team; leave empty otherwise.",
+      "default": ""
+    },
+    "app_store_2_issuer_id": {
+      "type": "string",
+      "title": "App Store Connect account 2: issuer ID",
+      "description": "The Issuer ID shown above the keys list on the same page.",
+      "default": ""
+    },
+    "app_store_2_private_key": {
+      "type": "string",
+      "title": "App Store Connect account 2: private key",
+      "description": "Open the AuthKey_XXXXXXXXXX.p8 file you downloaded in a text editor, copy all of it (including the BEGIN and END lines) and paste it here. It is kept in your system's secure storage.",
+      "sensitive": true
+    },
+    "app_store_2_name": {
+      "type": "string",
+      "title": "App Store Connect account 2: account name (optional)",
+      "description": "A short name for this team, such as acme, so you can tell accounts apart.",
+      "default": ""
+    },
+    "app_store_3_key_id": {
+      "type": "string",
+      "title": "App Store Connect account 3: key ID",
+      "description": "Key ID of a Team API key (App Store Connect > Users and Access > Integrations > App Store Connect API). The App Manager role covers listings, screenshots, versions, builds and TestFlight. Only if you have another team; leave empty otherwise.",
+      "default": ""
+    },
+    "app_store_3_issuer_id": {
+      "type": "string",
+      "title": "App Store Connect account 3: issuer ID",
+      "description": "The Issuer ID shown above the keys list on the same page.",
+      "default": ""
+    },
+    "app_store_3_private_key": {
+      "type": "string",
+      "title": "App Store Connect account 3: private key",
+      "description": "Open the AuthKey_XXXXXXXXXX.p8 file you downloaded in a text editor, copy all of it (including the BEGIN and END lines) and paste it here. It is kept in your system's secure storage.",
+      "sensitive": true
+    },
+    "app_store_3_name": {
+      "type": "string",
+      "title": "App Store Connect account 3: account name (optional)",
+      "description": "A short name for this team, such as acme, so you can tell accounts apart.",
+      "default": ""
+    },
+    "google_play_service_account": {
+      "type": "string",
+      "title": "Google Play: service account key",
+      "description": "Open the service account .json key file you downloaded from Google Cloud in a text editor, copy all of it and paste it here. It is kept in your system's secure storage.",
+      "sensitive": true
+    },
+    "google_play_name": {
+      "type": "string",
+      "title": "Google Play: account name (optional)",
+      "description": "A short name for this developer account, such as acme.",
+      "default": ""
+    },
+    "google_play_2_service_account": {
+      "type": "string",
+      "title": "Google Play account 2: service account key",
+      "description": "Open the service account .json key file you downloaded from Google Cloud in a text editor, copy all of it and paste it here. It is kept in your system's secure storage. Only if you have another developer account; leave empty otherwise.",
+      "sensitive": true
+    },
+    "google_play_2_name": {
+      "type": "string",
+      "title": "Google Play account 2: account name (optional)",
+      "description": "A short name for this developer account, such as acme.",
+      "default": ""
+    },
+    "google_play_3_service_account": {
+      "type": "string",
+      "title": "Google Play account 3: service account key",
+      "description": "Open the service account .json key file you downloaded from Google Cloud in a text editor, copy all of it and paste it here. It is kept in your system's secure storage. Only if you have another developer account; leave empty otherwise.",
+      "sensitive": true
+    },
+    "google_play_3_name": {
+      "type": "string",
+      "title": "Google Play account 3: account name (optional)",
+      "description": "A short name for this developer account, such as acme.",
+      "default": ""
+    }
+  },
+  "mcpServers": {
+    "store-studio": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/server/index.mjs"
+      ],
+      "env": {
+        "ASC_KEY_ID": "${user_config.app_store_key_id}",
+        "ASC_ISSUER_ID": "${user_config.app_store_issuer_id}",
+        "ASC_PRIVATE_KEY": "${user_config.app_store_private_key}",
+        "ASC_NAME": "${user_config.app_store_name}",
+        "ASC_2_KEY_ID": "${user_config.app_store_2_key_id}",
+        "ASC_2_ISSUER_ID": "${user_config.app_store_2_issuer_id}",
+        "ASC_2_PRIVATE_KEY": "${user_config.app_store_2_private_key}",
+        "ASC_2_NAME": "${user_config.app_store_2_name}",
+        "ASC_3_KEY_ID": "${user_config.app_store_3_key_id}",
+        "ASC_3_ISSUER_ID": "${user_config.app_store_3_issuer_id}",
+        "ASC_3_PRIVATE_KEY": "${user_config.app_store_3_private_key}",
+        "ASC_3_NAME": "${user_config.app_store_3_name}",
+        "PLAY_SERVICE_ACCOUNT": "${user_config.google_play_service_account}",
+        "PLAY_NAME": "${user_config.google_play_name}",
+        "PLAY_2_SERVICE_ACCOUNT": "${user_config.google_play_2_service_account}",
+        "PLAY_2_NAME": "${user_config.google_play_2_name}",
+        "PLAY_3_SERVICE_ACCOUNT": "${user_config.google_play_3_service_account}",
+        "PLAY_3_NAME": "${user_config.google_play_3_name}",
+        "STORE_STUDIO_DATA": "${CLAUDE_PLUGIN_DATA}"
+      }
+    }
+  }
+}

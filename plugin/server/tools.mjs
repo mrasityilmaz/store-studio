@@ -5,7 +5,6 @@ import {
   CONFIRM,
   SETUP_HINT,
   accounts,
-  accountsFile,
   asc,
   ascForApp,
   play,
@@ -84,7 +83,7 @@ export const tools = [
   {
     name: 'setup_check',
     description:
-      'Shows every configured App Store Connect and Google Play account and tests each one: which apps it sees, and Play access to a package. Never prints key contents. Use it first, and when a store tool reports a setup or permission problem.',
+      'Shows every App Store Connect and Google Play account set in the plugin settings (up to three per store) and tests each one: which apps it sees, and Play access to a package. Never prints key contents. Use it first, and when a store tool reports a setup or permission problem.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -94,10 +93,9 @@ export const tools = [
     },
     async run({ live = true, package: pkg }) {
       const all = accounts();
-      const out = { accounts_file: accountsFile(), app_store: {}, google_play: {} };
-      for (const name of Object.keys(all.asc)) {
-        const a = all.asc[name];
-        const row = { key_id: a.keyId ?? null, key_file: a.keyPath ?? null };
+      const out = { settings: '/plugin > Installed > store-studio > Configure options', app_store: {}, google_play: {} };
+      for (const [name, a] of Object.entries(all.asc)) {
+        const row = { slot: a.slot, key_id: a.keyId ?? null };
         if (live) {
           try {
             row.apps = (await asc(name).apps()).map((x) => `${x.name} (${x.bundleId})`);
@@ -109,8 +107,8 @@ export const tools = [
         }
         out.app_store[name] = row;
       }
-      for (const name of Object.keys(all.play)) {
-        const row = { service_account_file: all.play[name].serviceAccountPath };
+      for (const [name, a] of Object.entries(all.play)) {
+        const row = { slot: a.slot };
         try {
           const client = play(name);
           row.service_account = (await client.account()).client_email;

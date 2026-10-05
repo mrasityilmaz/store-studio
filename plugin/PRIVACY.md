@@ -3,10 +3,16 @@
 store-studio runs entirely on your machine as a local process started by Claude Code.
 
 - **No data collection.** It has no telemetry, analytics or server of its own.
-- **Credentials.** It reads the App Store Connect `.p8` key and the Google Play
-  service account JSON from the paths you configure, only to sign short-lived
-  access tokens locally. Key contents are never stored, logged, shown to Claude
-  or sent anywhere. Only the signed tokens go to Apple and Google.
+- **Credentials.** You paste your App Store Connect `.p8` key and Google Play
+  service account key into the plugin settings, which keep them in your
+  system's secure credential store (the Keychain on a Mac). Claude Code passes
+  them to the local store-studio process, which uses them only to sign
+  short-lived access tokens. Key contents are never logged, shown to Claude or
+  sent anywhere; only the signed tokens go to Apple and Google. The one
+  exception is a confirmed IPA upload on a Mac: Apple's `altool` reads keys
+  only from files, so the key is written to a private temporary folder for the
+  upload and deleted as soon as `altool` finishes. The plugin never reads key
+  files from your disk.
 - **Your files.** It reads the image folders you point it at and uploads them to
   the store you choose, after you confirm. Downloads are written only to the
   folder you name. On a Mac, a confirmed IPA upload hands the file to

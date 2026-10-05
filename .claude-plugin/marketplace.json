@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "store-studio",
-      "source": "./",
+      "source": "./plugin",
       "description": "Manage App Store Connect and Google Play from Claude Code: screenshots and store text for every locale and device, builds and staged rollouts, TestFlight, reviews, reports and every other endpoint of both official APIs, with a dry run before every change."
     }
   ]

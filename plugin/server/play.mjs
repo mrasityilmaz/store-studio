@@ -1,6 +1,5 @@
 import { sign } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { StoreError, assertHost, assertPlainPath, b64url, fetchRetry } from './util.mjs';
+import { SETTINGS_HINT, StoreError, assertHost, assertPlainPath, b64url, fetchRetry, pemKey } from './util.mjs';
 
 export const HOST = 'https://androidpublisher.googleapis.com';
 const API = `${HOST}/androidpublisher/v3/applications`;
@@ -16,26 +15,26 @@ export const LISTING_FIELDS = {
 };
 
 export class GooglePlay {
-  constructor({ serviceAccountPath }) {
-    this.path = serviceAccountPath;
+  // serviceAccount: the service account .json contents from the plugin settings.
+  constructor({ serviceAccount }) {
+    this.json = serviceAccount;
   }
 
   async account() {
     if (this.sa) return this.sa;
-    const text = await readFile(this.path, 'utf8').catch(() => {
-      throw new StoreError(`Can't read the service account file at ${this.path}`);
-    });
+    const text = String(this.json ?? '').trim();
     let sa;
     try {
       sa = JSON.parse(text);
     } catch {
-      throw new StoreError(`${this.path} is not valid JSON`);
+      const why = /^[~/]/.test(text) ? 'holds a file path' : "isn't valid JSON";
+      throw new StoreError(`The Google Play service account setting ${why}. Paste the whole contents of the .json key file. ${SETTINGS_HINT}`);
     }
-    if (sa.type !== 'service_account' || !sa.private_key || !sa.client_email) {
-      throw new StoreError(`${this.path} is not a Google service account key (expected "type": "service_account")`);
+    if (sa?.type !== 'service_account' || !sa.private_key || !sa.client_email) {
+      throw new StoreError(`The Google Play service account setting isn't a service account key (expected "type": "service_account"). ${SETTINGS_HINT}`);
     }
-    this.sa = sa;
-    return sa;
+    this.sa = { ...sa, private_key: pemKey(sa.private_key, `The private key of ${sa.client_email}`) };
+    return this.sa;
   }
 
   async token() {

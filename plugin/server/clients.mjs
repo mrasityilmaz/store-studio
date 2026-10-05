@@ -1,62 +1,45 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { AppStoreConnect } from './asc.mjs';
 import { GooglePlay } from './play.mjs';
-import { StoreError, envValue } from './util.mjs';
+import { SETTINGS_HINT, StoreError, clean } from './util.mjs';
 
 // ---------------------------------------------------------------- accounts
 
-export const SETUP_HINT =
-  'Set it in the plugin options (run /plugin, open store-studio, configure) or in the accounts file, and see the store-setup skill.';
+export const SETUP_HINT = SETTINGS_HINT;
 
-const expand = (p) => (typeof p === 'string' && p.startsWith('~/') ? join(homedir(), p.slice(2)) : p);
+// The plugin settings as Claude Code passes them to this server: up to three
+// accounts per store. Key contents come from the system's secure storage via
+// sensitive settings; nothing is read from files.
+function settings() {
+  const env = process.env;
+  return {
+    asc: [
+      { name: env.ASC_NAME, keyId: env.ASC_KEY_ID, issuerId: env.ASC_ISSUER_ID, privateKey: env.ASC_PRIVATE_KEY },
+      { name: env.ASC_2_NAME, keyId: env.ASC_2_KEY_ID, issuerId: env.ASC_2_ISSUER_ID, privateKey: env.ASC_2_PRIVATE_KEY },
+      { name: env.ASC_3_NAME, keyId: env.ASC_3_KEY_ID, issuerId: env.ASC_3_ISSUER_ID, privateKey: env.ASC_3_PRIVATE_KEY },
+    ],
+    play: [
+      { name: env.PLAY_NAME, serviceAccount: env.PLAY_SERVICE_ACCOUNT },
+      { name: env.PLAY_2_NAME, serviceAccount: env.PLAY_2_SERVICE_ACCOUNT },
+      { name: env.PLAY_3_NAME, serviceAccount: env.PLAY_3_SERVICE_ACCOUNT },
+    ],
+  };
+}
 
-export const accountsFile = () =>
-  envValue('STORE_STUDIO_ACCOUNTS') ?? join(homedir(), '.config', 'store-studio', 'accounts.json');
+const slug = (s) => (s ?? '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
 
-// Named accounts per store. The plugin options are the "default" account; the
-// accounts file adds more. Only IDs and key file paths live in either, never
-// key contents. The file is re-read on every call, so edits apply at once.
+// Named accounts per store, from the filled-in setting slots. A slot without
+// a name is called app-store / google-play (plus its number after the first).
 export function accounts() {
   const out = { asc: {}, play: {} };
-  const asc = {
-    keyId: envValue('ASC_KEY_ID'),
-    issuerId: envValue('ASC_ISSUER_ID'),
-    keyPath: envValue('ASC_PRIVATE_KEY_PATH'),
-  };
-  if (asc.keyId || asc.issuerId || asc.keyPath) out.asc.default = asc;
-  const sa = envValue('PLAY_SERVICE_ACCOUNT_PATH');
-  if (sa) out.play.default = { serviceAccountPath: sa };
-
-  const file = accountsFile();
-  if (existsSync(file)) {
-    let data;
-    try {
-      data = JSON.parse(readFileSync(file, 'utf8'));
-    } catch (err) {
-      throw new StoreError(`Can't read the accounts file ${file}: ${err.message}`);
-    }
-    for (const [name, a] of Object.entries(data.app_store ?? {})) {
-      out.asc[name] = { keyId: a.key_id, issuerId: a.issuer_id, keyPath: expand(a.private_key) };
-    }
-    for (const [name, a] of Object.entries(data.google_play ?? {})) {
-      out.play[name] = { serviceAccountPath: expand(a.service_account) };
-    }
-  }
-  // The plugin options and the file may hold the same key; keep the named one.
-  const named = (store, same) => Object.entries(out[store]).some(([n, a]) => n !== 'default' && same(a));
-  if (out.asc.default && named('asc', (a) => a.keyId === out.asc.default.keyId)) delete out.asc.default;
-  if (out.play.default) {
-    const email = (path) => {
-      try {
-        return JSON.parse(readFileSync(path, 'utf8')).client_email;
-      } catch {
-        return path;
-      }
-    };
-    const own = email(out.play.default.serviceAccountPath);
-    if (named('play', (a) => email(a.serviceAccountPath) === own)) delete out.play.default;
+  const all = settings();
+  for (const [store, fallback] of [['asc', 'app-store'], ['play', 'google-play']]) {
+    all[store].forEach(({ name, ...fields }, i) => {
+      const values = Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, clean(v)]));
+      if (!Object.values(values).some(Boolean)) return;
+      let key = slug(clean(name)) || (i ? `${fallback}-${i + 1}` : fallback);
+      if (out[store][key]) key = `${key}-${i + 1}`;
+      out[store][key] = { ...values, slot: i + 1 };
+    });
   }
   return out;
 }
@@ -76,7 +59,7 @@ const ascClients = new Map();
 const playClients = new Map();
 
 function ascClient(name, c) {
-  const missing = [!c.keyId && 'key ID', !c.issuerId && 'issuer ID', !c.keyPath && 'private key path'].filter(Boolean);
+  const missing = [!c.keyId && 'key ID', !c.issuerId && 'issuer ID', !c.privateKey && 'private key'].filter(Boolean);
   if (missing.length) throw new StoreError(`App Store Connect account "${name}" is missing its ${missing.join(', ')}. ${SETUP_HINT}`);
   const key = JSON.stringify(c);
   if (ascClients.get(name)?.key !== key) ascClients.set(name, { key, client: new AppStoreConnect(c) });
@@ -84,9 +67,9 @@ function ascClient(name, c) {
 }
 
 function playClient(name, c) {
-  if (!c.serviceAccountPath) throw new StoreError(`Google Play account "${name}" has no service account file. ${SETUP_HINT}`);
-  if (playClients.get(name)?.key !== c.serviceAccountPath) {
-    playClients.set(name, { key: c.serviceAccountPath, client: new GooglePlay(c) });
+  if (!c.serviceAccount) throw new StoreError(`Google Play account "${name}" has no service account key. ${SETUP_HINT}`);
+  if (playClients.get(name)?.key !== c.serviceAccount) {
+    playClients.set(name, { key: c.serviceAccount, client: new GooglePlay(c) });
   }
   return playClients.get(name).client;
 }

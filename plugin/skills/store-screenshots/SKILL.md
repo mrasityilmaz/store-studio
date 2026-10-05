@@ -81,13 +81,16 @@ Name files `01_name.png`, `02_name.png`, and so on: file-name order becomes stor
 
 ## 6. Render
 
-Headless Chrome, one call per image, with the viewport set to the exact output size:
+Headless Chrome, one call per image, with the viewport set to the exact output
+size. Use the Chrome binary on the machine (on a Mac,
+`/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`) and the page's
+absolute path:
 
 ```bash
-"$CHROME" --headless=new --hide-scrollbars --force-device-scale-factor=1 \
+chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 \
   --window-size=1320,2868 --virtual-time-budget=8000 \
   --screenshot=export/ios/en-US/iphone-6.9/01_hero.png \
-  "file://$PWD/screens.html?lang=en-US&device=iphone&frame=1"
+  "file:///path/to/project/screens.html?lang=en-US&device=iphone&frame=1"
 ```
 
 Playwright or Puppeteer work too. Set `deviceScaleFactor: 1`, `viewport` to the
@@ -98,8 +101,10 @@ Chrome writes RGBA PNGs, and both stores reject alpha channels, so strip it:
 ```bash
 magick in.png -background '#000' -alpha remove -alpha off out.png   # ImageMagick
 ffmpeg -y -i in.png -pix_fmt rgb24 out.png                         # ffmpeg
-python3 -c "from PIL import Image; Image.open('in.png').convert('RGB').save('out.png')"
 ```
+
+Or render JPEG instead of PNG (Playwright and Puppeteer take `type: 'jpeg'`),
+which has no alpha channel.
 
 For a big matrix (many locales, sizes and frames), keep one browser open and
 drive it through Playwright, Puppeteer or the DevTools protocol instead of

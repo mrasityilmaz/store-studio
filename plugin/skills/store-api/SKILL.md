@@ -51,8 +51,8 @@ The privacy policy URL is regular store text (`privacy_policy_url` in
 
 1. Version: `asc_version_create`, then `asc_metadata_update` for what's new.
 2. IPA, Mac only: `asc_ipa_upload` with the absolute path of the `.ipa`. It runs
-   `xcrun altool` using the configured key, so it works on any Mac that has
-   Xcode and the plugin options. Dry run first. Apple rejects a build number
+   `xcrun altool` with the key from the plugin settings, so it works on any Mac
+   that has Xcode and those settings. Dry run first. Apple rejects a build number
    that is already uploaded. A non-Mac host stops with an error. Then attach
    the processed build: `GET /v1/builds` with `filter[app]`, `filter[preReleaseVersion.version]`
    and `filter[processingState]=VALID`, then `PATCH /v1/appStoreVersions/{id}/relationships/build`

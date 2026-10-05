@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fetchRetry } from '../server/util.mjs';
+import { fetchRetry } from '../plugin/server/util.mjs';
 
 const seen = [];
 let reply;
@@ -43,7 +43,7 @@ process.env.STORE_STUDIO_DATA = data;
 mkdirSync(join(data, 'reference'));
 writeFileSync(join(data, 'reference/play-discovery.json'), '{"revision": "cut off');
 reply = () => new Response(JSON.stringify({ revision: 'fresh', schemas: {}, resources: {} }));
-const { playDiscovery } = await import('../server/docs.mjs?broken-cache');
+const { playDiscovery } = await import('../plugin/server/docs.mjs?broken-cache');
 assert.equal((await playDiscovery()).revision, 'fresh');
 assert.equal(JSON.parse(readFileSync(join(data, 'reference/play-discovery.json'), 'utf8')).revision, 'fresh');
 assert.deepEqual(readdirSync(join(data, 'reference')), ['play-discovery.json'], 'no temp file left behind');

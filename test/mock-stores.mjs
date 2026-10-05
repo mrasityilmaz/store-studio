@@ -10,21 +10,18 @@ import { makeTree } from './fixtures.mjs';
 const tmp = mkdtempSync(join(tmpdir(), 'store-studio-'));
 const ec = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
 const rsa = generateKeyPairSync('rsa', { modulusLength: 2048 });
-writeFileSync(join(tmp, 'AuthKey_TEST.p8'), ec.privateKey.export({ type: 'pkcs8', format: 'pem' }));
-writeFileSync(
-  join(tmp, 'sa.json'),
-  JSON.stringify({
-    type: 'service_account',
-    client_email: 'uploader@proj.iam.gserviceaccount.com',
-    private_key_id: 'kid1',
-    private_key: rsa.privateKey.export({ type: 'pkcs8', format: 'pem' }),
-    token_uri: 'https://oauth2.googleapis.com/token',
-  }),
-);
+// The plugin settings, as Claude Code passes them. The .p8 arrives with its
+// line breaks turned into spaces, as a paste into a one-line field can do.
 process.env.ASC_KEY_ID = 'KEY123';
 process.env.ASC_ISSUER_ID = 'issuer-uuid';
-process.env.ASC_PRIVATE_KEY_PATH = join(tmp, 'AuthKey_TEST.p8');
-process.env.PLAY_SERVICE_ACCOUNT_PATH = join(tmp, 'sa.json');
+process.env.ASC_PRIVATE_KEY = ec.privateKey.export({ type: 'pkcs8', format: 'pem' }).replace(/\n/g, ' ');
+process.env.PLAY_SERVICE_ACCOUNT = JSON.stringify({
+  type: 'service_account',
+  client_email: 'uploader@proj.iam.gserviceaccount.com',
+  private_key_id: 'kid1',
+  private_key: rsa.privateKey.export({ type: 'pkcs8', format: 'pem' }),
+  token_uri: 'https://oauth2.googleapis.com/token',
+}, null, 2);
 
 // Local folders: en-US and tr iPhone, plus fr-FR (missing remotely).
 const iphone = { 'iphone-6.5': [1284, 2778, 7] };
@@ -192,7 +189,7 @@ globalThis.fetch = async (url, init = {}) => {
   return fakePlay(url, init);
 };
 
-const { tools } = await import('../server/tools.mjs');
+const { tools } = await import('../plugin/server/tools.mjs');
 const run = async (name, args) => {
   const events = [];
   const out = await tools.find((t) => t.name === name).run(args, { progress: (msg) => events.push(msg) });

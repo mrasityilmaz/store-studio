@@ -70,7 +70,9 @@ export async function fetchRetry(url, init, tries = 4) {
 // the store sees. Takes a path or a full URL; the query is not checked.
 export function assertPlainPath(pathOrUrl) {
   const s = String(pathOrUrl);
-  const path = s.replace(/^https:\/\/[^/?#]*/, '').split('?')[0];
+  // Without URL parsing, which would hide what this looks for.
+  const start = s.startsWith('https://') ? s.indexOf('/', 'https://'.length) : 0;
+  const path = start < 0 ? '' : s.slice(start).split('?')[0];
   const bad =
     /[#\u0000-\u001f\u007f]/.test(s) ||
     /[\\\s]|%(2f|5c)/i.test(path) ||
@@ -87,13 +89,31 @@ export function assertHost(url, domains) {
   if (!ok) throw new StoreError(`Refusing unexpected URL host: ${u.hostname}`);
 }
 
-// Reads a plugin option from the environment. Unset options can arrive empty
-// or as the literal placeholder.
-export function envValue(name) {
-  const s = (process.env[name] ?? '').trim();
-  if (!s || s.startsWith('${')) return undefined;
-  return s.startsWith('~/') ? join(homedir(), s.slice(2)) : s;
+// A plugin setting as Claude Code passes it: unset ones can arrive empty or
+// as the literal placeholder.
+export function clean(value) {
+  const s = (value ?? '').trim();
+  return !s || s.startsWith('${') ? undefined : s;
 }
 
 // Cache for downloaded API references and report files.
-export const dataDir = () => envValue('STORE_STUDIO_DATA') ?? join(homedir(), '.cache', 'store-studio');
+export const dataDir = () => clean(process.env.STORE_STUDIO_DATA) ?? join(homedir(), '.cache', 'store-studio');
+
+export const SETTINGS_HINT =
+  'Add it in the plugin settings: run /plugin, open store-studio on the Installed tab and choose Configure options (the store-setup skill walks through it). Key contents go into that dialog, never into the chat.';
+
+// A private key pasted into the plugin settings, as PEM. Pasting can turn line
+// breaks into spaces or literal \n, or drop the BEGIN/END lines, so the base64
+// body is re-wrapped. `what` names the setting in errors; the value is never quoted.
+export function pemKey(text, what) {
+  const s = String(text ?? '').replace(/\\n/g, '\n').trim();
+  if (/^[~/]/.test(s) || /^[A-Za-z]:\\/.test(s)) {
+    throw new StoreError(`${what} holds a file path. Paste the contents of the key file instead. ${SETTINGS_HINT}`);
+  }
+  const label = s.match(/-----BEGIN ([A-Z ]*PRIVATE KEY)-----/)?.[1] ?? 'PRIVATE KEY';
+  const body = s.replace(/-----(BEGIN|END) [A-Z ]*PRIVATE KEY-----/g, '').replace(/\s+/g, '');
+  if (!/^[A-Za-z0-9+/]+=*$/.test(body)) {
+    throw new StoreError(`${what} isn't a private key. Paste the whole key, including the BEGIN and END lines. ${SETTINGS_HINT}`);
+  }
+  return `-----BEGIN ${label}-----\n${body.match(/.{1,64}/g).join('\n')}\n-----END ${label}-----\n`;
+}

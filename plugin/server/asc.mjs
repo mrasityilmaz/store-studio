@@ -1,7 +1,7 @@
 import { createPrivateKey, sign } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { ASC_EDITABLE } from './specs.mjs';
-import { StoreError, assertHost, assertPlainPath, b64url, fetchRetry, md5, sleep } from './util.mjs';
+import { SETTINGS_HINT, StoreError, assertHost, assertPlainPath, b64url, fetchRetry, md5, pemKey, sleep } from './util.mjs';
 
 const BASE = 'https://api.appstoreconnect.apple.com';
 
@@ -22,23 +22,23 @@ export const INFO_FIELDS = {
 };
 
 export class AppStoreConnect {
-  constructor({ keyId, issuerId, keyPath }) {
+  // privateKey: the .p8 contents from the plugin settings.
+  constructor({ keyId, issuerId, privateKey }) {
     this.keyId = keyId;
     this.issuerId = issuerId;
-    this.keyPath = keyPath;
+    this.privateKey = privateKey;
   }
 
   async token() {
     const now = Math.floor(Date.now() / 1000);
     if (this.jwt && this.jwtExp - now > 60) return this.jwt;
     if (!this.key) {
-      const pem = await readFile(this.keyPath, 'utf8').catch(() => {
-        throw new StoreError(`Can't read the App Store Connect key at ${this.keyPath}`);
-      });
+      const what = `The App Store Connect private key for key ID ${this.keyId}`;
+      const pem = pemKey(this.privateKey, what);
       try {
         this.key = createPrivateKey(pem);
       } catch {
-        throw new StoreError(`${this.keyPath} is not a valid .p8 private key`);
+        throw new StoreError(`${what} isn't a valid .p8 key. Paste the whole AuthKey file again. ${SETTINGS_HINT}`);
       }
     }
     // Apple allows at most 20 minutes.

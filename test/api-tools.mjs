@@ -9,16 +9,18 @@ import { gzipSync } from 'node:zlib';
 const tmp = mkdtempSync(join(tmpdir(), 'store-studio-api-'));
 const ec = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
 const rsa = generateKeyPairSync('rsa', { modulusLength: 2048 });
-writeFileSync(join(tmp, 'key.p8'), ec.privateKey.export({ type: 'pkcs8', format: 'pem' }));
-writeFileSync(join(tmp, 'sa.json'), JSON.stringify({
+const p8 = ec.privateKey.export({ type: 'pkcs8', format: 'pem' });
+const saJson = JSON.stringify({
   type: 'service_account', client_email: 'sa@p.iam.gserviceaccount.com', private_key_id: 'k',
   private_key: rsa.privateKey.export({ type: 'pkcs8', format: 'pem' }), token_uri: 'https://oauth2.googleapis.com/token',
-}));
+});
+// Key files on disk only to check they are refused as bodies and save targets.
+writeFileSync(join(tmp, 'key.p8'), p8);
+writeFileSync(join(tmp, 'sa.json'), saJson);
+// The plugin settings, as Claude Code passes them.
 Object.assign(process.env, {
-  ASC_KEY_ID: 'K2', ASC_ISSUER_ID: 'I2', ASC_PRIVATE_KEY_PATH: join(tmp, 'key.p8'),
-  PLAY_SERVICE_ACCOUNT_PATH: join(tmp, 'sa.json'), STORE_STUDIO_DATA: join(tmp, 'data'),
-  // Never the real accounts file, even when run on its own.
-  STORE_STUDIO_ACCOUNTS: join(tmp, 'accounts.json'),
+  ASC_KEY_ID: 'K2', ASC_ISSUER_ID: 'I2', ASC_PRIVATE_KEY: p8, PLAY_SERVICE_ACCOUNT: saJson,
+  STORE_STUDIO_DATA: join(tmp, 'data'),
 });
 
 // Reference fixtures in the cache, so no network is needed.
@@ -138,7 +140,7 @@ globalThis.fetch = async (url, init = {}) => {
   return json({ errors: [{ title: 'unexpected', detail: `${m} ${url}` }] }, 404);
 };
 
-const { apiTools } = await import('../server/api-tools.mjs');
+const { apiTools } = await import('../plugin/server/api-tools.mjs');
 const run = (name, args) => apiTools.find((t) => t.name === name).run(args, { progress() {} });
 
 // Docs.
@@ -256,17 +258,15 @@ await assert.rejects(run('play_api_write', { method: 'POST', path: 'applications
 await assert.rejects(run('play_api_get', { path: 'applications/com.demo/reviews/%2e%2e/%2e%2e/x' }), /Refusing the path/);
 assert.equal(calls.length, before, 'nothing sent');
 // The clients check every path too, whatever built it.
-const { GooglePlay } = await import('../server/play.mjs');
-const { AppStoreConnect } = await import('../server/asc.mjs');
-await assert.rejects(new GooglePlay({ serviceAccountPath: join(tmp, 'sa.json') }).listing('com.demo', 'E1', '..'), /Refusing the path/);
+const { GooglePlay } = await import('../plugin/server/play.mjs');
+const { AppStoreConnect } = await import('../plugin/server/asc.mjs');
+await assert.rejects(new GooglePlay({ serviceAccount: saJson }).listing('com.demo', 'E1', '..'), /Refusing the path/);
 assert.throws(() => new AppStoreConnect({}).url('/v1/apps/%2e%2e/users'), /Refusing the path/);
 
 // Key files never become a body or a save target, and errors never quote a file.
 const reply = { method: 'POST', path: 'applications/com.demo/reviews/g1:reply' };
-await assert.rejects(run('play_api_write', { ...reply, body_file: join(tmp, 'sa.json') }), /key or accounts file/);
-await assert.rejects(run('asc_api_write', { method: 'POST', path: '/v1/customerReviewResponses', body_file: join(tmp, 'key.p8') }), /key or accounts file/);
-writeFileSync(join(tmp, 'copied-key.json'), readFileSync(join(tmp, 'sa.json')));
-let err = await run('play_api_write', { ...reply, body_file: join(tmp, 'copied-key.json') }).catch((e) => e);
+await assert.rejects(run('asc_api_write', { method: 'POST', path: '/v1/customerReviewResponses', body_file: join(tmp, 'key.p8') }), /is a key file/);
+let err = await run('play_api_write', { ...reply, body_file: join(tmp, 'sa.json') }).catch((e) => e);
 assert.match(err.message, /holds a private key/);
 assert.ok(!err.message.includes('BEGIN'));
 writeFileSync(join(tmp, 'broken.json'), '{"note": oops');
@@ -275,7 +275,7 @@ assert.match(err.message, /isn't valid JSON/);
 assert.ok(!err.message.includes('oops'), 'the file is not quoted');
 await assert.rejects(run('play_api_write', { ...reply, body: { replyText: '-----BEGIN PRIVATE KEY-----\nx' } }), /private key/);
 for (const file of ['key.p8', 'sa.json']) {
-  await assert.rejects(run('asc_api_get', { path: '/v1/salesReports', save_to: join(tmp, file), overwrite: true }), /key or accounts file/);
+  await assert.rejects(run('asc_api_get', { path: '/v1/salesReports', save_to: join(tmp, file), overwrite: true }), /is a key file/);
 }
 
 // Downloads: allowed hosts only, never with credentials.

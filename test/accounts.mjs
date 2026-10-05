@@ -1,32 +1,23 @@
-// Several accounts: the default one from the plugin options plus a second
-// one from the accounts file, each seeing different apps.
+// Several accounts from the plugin settings' slots, each seeing different apps.
 import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 
-const tmp = mkdtempSync(join(tmpdir(), 'store-studio-accounts-'));
 const pem = (k) => k.export({ type: 'pkcs8', format: 'pem' });
-const key = (file) => {
-  writeFileSync(join(tmp, file), pem(generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey));
-  return join(tmp, file);
-};
-const sa = (file, email) => {
-  const rsa = generateKeyPairSync('rsa', { modulusLength: 2048 });
-  writeFileSync(join(tmp, file), JSON.stringify({ type: 'service_account', client_email: email, private_key_id: email, private_key: pem(rsa.privateKey), token_uri: 'https://oauth2.googleapis.com/token' }));
-  return join(tmp, file);
-};
+const key = () => pem(generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey);
+const sa = (email) =>
+  JSON.stringify({
+    type: 'service_account', client_email: email, private_key_id: email,
+    private_key: pem(generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey), token_uri: 'https://oauth2.googleapis.com/token',
+  });
 
+// Slot 1 unnamed; slot 2 named; slot 3 left as Claude Code passes unset settings.
 Object.assign(process.env, {
-  ASC_KEY_ID: 'KDEFAULT', ASC_ISSUER_ID: 'issuer-default', ASC_PRIVATE_KEY_PATH: key('default.p8'),
-  PLAY_SERVICE_ACCOUNT_PATH: sa('default.json', 'default@p.iam.gserviceaccount.com'),
-  STORE_STUDIO_ACCOUNTS: join(tmp, 'accounts.json'),
+  ASC_KEY_ID: 'KDEFAULT', ASC_ISSUER_ID: 'issuer-default', ASC_PRIVATE_KEY: key(), ASC_NAME: '',
+  ASC_2_KEY_ID: 'KAPPIK', ASC_2_ISSUER_ID: 'issuer-appik', ASC_2_PRIVATE_KEY: key(), ASC_2_NAME: ' Appik ',
+  ASC_3_KEY_ID: '${user_config.app_store_3_key_id}', ASC_3_PRIVATE_KEY: '',
+  PLAY_SERVICE_ACCOUNT: sa('default@p.iam.gserviceaccount.com'),
+  PLAY_2_SERVICE_ACCOUNT: sa('appik@p.iam.gserviceaccount.com'), PLAY_2_NAME: 'appik',
 });
-writeFileSync(join(tmp, 'accounts.json'), JSON.stringify({
-  app_store: { appik: { key_id: 'KAPPIK', issuer_id: 'issuer-appik', private_key: key('appik.p8') } },
-  google_play: { appik: { service_account: sa('appik.json', 'appik@p.iam.gserviceaccount.com') } },
-}));
 
 // Each ASC key sees its own app; each Play account opens only its own package.
 const APPS = {
@@ -72,34 +63,35 @@ globalThis.fetch = async (url, init = {}) => {
   return json({ errors: [{ title: 'unexpected', detail: `${m} ${url}` }] }, 404);
 };
 
-const { tools } = await import('../server/tools.mjs');
-const { apiTools } = await import('../server/api-tools.mjs');
-const { asc, accounts } = await import('../server/clients.mjs');
+const { tools } = await import('../plugin/server/tools.mjs');
+const { apiTools } = await import('../plugin/server/api-tools.mjs');
+const { asc, accounts } = await import('../plugin/server/clients.mjs');
 const run = (name, args = {}) => [...tools, ...apiTools].find((t) => t.name === name).run(args, { progress() {} });
 
-assert.deepEqual(Object.keys(accounts().asc), ['default', 'appik']);
+assert.deepEqual(Object.keys(accounts().asc), ['app-store', 'appik']);
+assert.deepEqual(Object.keys(accounts().play), ['google-play', 'appik']);
 assert.throws(() => asc(), /Several App Store Connect accounts/);
 
 // setup_check and asc_apps cover every account.
 let r = await run('setup_check', { package: 'com.other.app' });
-assert.deepEqual(r.app_store.default.apps, ['Demo (com.demo.app)']);
+assert.deepEqual(r.app_store['app-store'].apps, ['Demo (com.demo.app)']);
 assert.deepEqual(r.app_store.appik.apps, ['Other (com.other.app)']);
-assert.equal(r.google_play.default.ok, false, 'default SA has no access to com.other.app');
+assert.equal(r.google_play['google-play'].ok, false, 'slot 1 has no access to com.other.app');
 assert.equal(r.google_play.appik.package_access, 'com.other.app: ok');
 r = await run('asc_apps');
-assert.deepEqual(r.map((a) => `${a.account}:${a.bundle_id}`), ['default:com.demo.app', 'appik:com.other.app']);
+assert.deepEqual(r.map((a) => `${a.account}:${a.bundle_id}`), ['app-store:com.demo.app', 'appik:com.other.app']);
 
 // App tools find the right account by bundle id, then remember it.
 calls.length = 0;
-const { ascForApp, playForPackage } = await import('../server/clients.mjs');
+const { ascForApp, playForPackage } = await import('../plugin/server/clients.mjs');
 r = await ascForApp('com.other.app');
 assert.equal(r.account, 'appik');
-assert.deepEqual(calls, ['asc KDEFAULT /v1/apps', 'asc KAPPIK /v1/apps'], 'tries default, then appik');
+assert.deepEqual(calls, ['asc KDEFAULT /v1/apps', 'asc KAPPIK /v1/apps'], 'tries slot 1, then appik');
 calls.length = 0;
 await ascForApp('com.other.app');
 assert.deepEqual(calls, ['asc KAPPIK /v1/apps'], 'remembered account goes first');
 await assert.rejects(ascForApp('com.nobody.app'), /None of the App Store Connect accounts/);
-assert.equal((await ascForApp('com.demo.app', 'default')).account, 'default');
+assert.equal((await ascForApp('com.demo.app', 'app-store')).account, 'app-store');
 await assert.rejects(ascForApp('com.demo.app', 'nope'), /No App Store Connect account named "nope"/);
 
 // Play: the package picks the service account.
@@ -115,8 +107,28 @@ await assert.rejects(run('asc_api_get', { path: '/v1/salesReports' }), /pass acc
 r = await run('play_api_get', { path: 'applications/com.other.app/edits/x/listings' }).catch((e) => e);
 assert.ok(!/pass account/.test(String(r)), 'package in the path picks the Play account');
 
-// A broken accounts file is reported, not ignored.
-writeFileSync(join(tmp, 'accounts.json'), '{ nope');
-assert.throws(() => accounts(), /Can't read the accounts file/);
+// setup_check shows slots and key IDs, never key contents.
+r = await run('setup_check', { live: false });
+assert.deepEqual(r.app_store.appik, { slot: 2, key_id: 'KAPPIK' });
+assert.equal(r.google_play.appik.service_account, 'appik@p.iam.gserviceaccount.com');
+assert.ok(!JSON.stringify(r).includes('PRIVATE KEY'));
+
+// Settings mistakes get plain errors that never quote the value.
+const { AppStoreConnect } = await import('../plugin/server/asc.mjs');
+const { GooglePlay } = await import('../plugin/server/play.mjs');
+await assert.rejects(new AppStoreConnect({ keyId: 'K', privateKey: '~/.appstoreconnect/AuthKey_K.p8' }).token(), /holds a file path/);
+await assert.rejects(new AppStoreConnect({ keyId: 'K', privateKey: 'key: {oops}' }).token(), /isn't a private key/);
+await assert.rejects(new AppStoreConnect({ keyId: 'K', privateKey: 'not a key at all' }).token(), /isn't a valid \.p8 key/);
+let err = await new GooglePlay({ serviceAccount: '{"type": "service_account", "private_key": "SECRET' }).account().catch((e) => e);
+assert.match(err.message, /isn't valid JSON/);
+assert.ok(!err.message.includes('SECRET'));
+await assert.rejects(new GooglePlay({ serviceAccount: '/Users/me/key.json' }).account(), /holds a file path/);
+await assert.rejects(new GooglePlay({ serviceAccount: '{"type": "authorized_user"}' }).account(), /isn't a service account key/);
+// The private key with literal \n, as copied out of the JSON, still works.
+const flat = JSON.parse(sa('flat@p.iam.gserviceaccount.com')).private_key.replace(/\n/g, '\\n');
+assert.ok((await new GooglePlay({ serviceAccount: JSON.stringify({ type: 'service_account', client_email: 'f@x', private_key: flat }) }).account()).private_key.includes('\n'));
+// A slot with a missing field says which one.
+process.env.ASC_3_KEY_ID = 'K3';
+assert.throws(() => asc('app-store-3'), /"app-store-3" is missing its issuer ID, private key/);
 
 console.log('account checks passed');
