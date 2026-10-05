@@ -24,8 +24,14 @@ store-studio runs entirely on your machine as a local process started by Claude 
   own privacy policies apply there.
 - **Local cache.** The public API references and any reports you download without
   naming a path are kept in the plugin's data folder until you uninstall it.
+- **Personal data.** When you ask for it, the plugin reads data from your own
+  store accounts that can include personal data: customer review nicknames and
+  texts, TestFlight tester names and e-mail addresses, and similar fields in
+  other API responses. It doesn't store this data; it only writes a response
+  to a local file when you name one.
 - **What Claude sees.** Tool results (app names, store text, locale lists, image
-  sizes, upload results) are returned to Claude Code, which handles them under
+  sizes, upload results, and whatever store data you ask for, including the
+  personal data above) are returned to Claude Code, which handles them under
   your Claude plan's terms.
 
 Questions: open an issue at https://github.com/mrasityilmaz/store-studio/issues.
