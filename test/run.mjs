@@ -1,6 +1,6 @@
 // node test/run.mjs — validation rules plus the mock store flows.
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { makeTree } from './fixtures.mjs';
@@ -61,6 +61,10 @@ assert.equal(duplicate.code, 'ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE');
 assert.match(duplicate.message, /Build 50 is already on App Store Connect/);
 const unknown = explainAltool('detail : Something else went wrong.\n   iris-code : ENTITY_ERROR.UNKNOWN');
 assert.equal(unknown.message, 'Something else went wrong.');
+// The server reports the manifest's version without reading the manifest.
+const manifest = JSON.parse(readFileSync(new URL('../plugin/.claude-plugin/plugin.json', import.meta.url), 'utf8'));
+const server = readFileSync(new URL('../plugin/server/index.mjs', import.meta.url), 'utf8');
+assert.equal(server.match(/const VERSION = '([^']+)'/)?.[1], manifest.version, 'VERSION in index.mjs matches plugin.json');
 console.log('validation checks passed');
 
 await import('./mock-stores.mjs');

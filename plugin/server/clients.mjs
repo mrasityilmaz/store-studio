@@ -9,18 +9,29 @@ export const SETUP_HINT = SETTINGS_HINT;
 // The plugin settings as Claude Code passes them to this server: up to three
 // accounts per store. Key contents come from the system's secure storage via
 // sensitive settings; nothing is read from files.
+// Each slot is [name, ...values] in the order of ASC_FIELDS / PLAY_FIELDS.
+const ASC_FIELDS = ['keyId', 'issuerId', 'privateKey'];
+const PLAY_FIELDS = ['serviceAccount'];
+
 function settings() {
-  const env = process.env;
+  const {
+    ASC_NAME, ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY,
+    ASC_2_NAME, ASC_2_KEY_ID, ASC_2_ISSUER_ID, ASC_2_PRIVATE_KEY,
+    ASC_3_NAME, ASC_3_KEY_ID, ASC_3_ISSUER_ID, ASC_3_PRIVATE_KEY,
+    PLAY_NAME, PLAY_SERVICE_ACCOUNT,
+    PLAY_2_NAME, PLAY_2_SERVICE_ACCOUNT,
+    PLAY_3_NAME, PLAY_3_SERVICE_ACCOUNT,
+  } = process.env;
   return {
     asc: [
-      { name: env.ASC_NAME, keyId: env.ASC_KEY_ID, issuerId: env.ASC_ISSUER_ID, privateKey: env.ASC_PRIVATE_KEY },
-      { name: env.ASC_2_NAME, keyId: env.ASC_2_KEY_ID, issuerId: env.ASC_2_ISSUER_ID, privateKey: env.ASC_2_PRIVATE_KEY },
-      { name: env.ASC_3_NAME, keyId: env.ASC_3_KEY_ID, issuerId: env.ASC_3_ISSUER_ID, privateKey: env.ASC_3_PRIVATE_KEY },
+      [ASC_NAME, ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY],
+      [ASC_2_NAME, ASC_2_KEY_ID, ASC_2_ISSUER_ID, ASC_2_PRIVATE_KEY],
+      [ASC_3_NAME, ASC_3_KEY_ID, ASC_3_ISSUER_ID, ASC_3_PRIVATE_KEY],
     ],
     play: [
-      { name: env.PLAY_NAME, serviceAccount: env.PLAY_SERVICE_ACCOUNT },
-      { name: env.PLAY_2_NAME, serviceAccount: env.PLAY_2_SERVICE_ACCOUNT },
-      { name: env.PLAY_3_NAME, serviceAccount: env.PLAY_3_SERVICE_ACCOUNT },
+      [PLAY_NAME, PLAY_SERVICE_ACCOUNT],
+      [PLAY_2_NAME, PLAY_2_SERVICE_ACCOUNT],
+      [PLAY_3_NAME, PLAY_3_SERVICE_ACCOUNT],
     ],
   };
 }
@@ -32,9 +43,9 @@ const slug = (s) => (s ?? '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replac
 export function accounts() {
   const out = { asc: {}, play: {} };
   const all = settings();
-  for (const [store, fallback] of [['asc', 'app-store'], ['play', 'google-play']]) {
-    all[store].forEach(({ name, ...fields }, i) => {
-      const values = Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, clean(v)]));
+  for (const [store, fallback, fields] of [['asc', 'app-store', ASC_FIELDS], ['play', 'google-play', PLAY_FIELDS]]) {
+    all[store].forEach(([name, ...slot], i) => {
+      const values = Object.fromEntries(fields.map((field, j) => [field, clean(slot[j])]));
       if (!Object.values(values).some(Boolean)) return;
       let key = slug(clean(name)) || (i ? `${fallback}-${i + 1}` : fallback);
       if (out[store][key]) key = `${key}-${i + 1}`;
@@ -52,7 +63,7 @@ function pickAccount(all, account, store) {
     return account;
   }
   if (names.length === 1) return names[0];
-  throw new StoreError(`Several ${store} accounts are set up (${names.join(', ')}); pass account.`);
+  throw new StoreError(`Several ${store} accounts are set up (${names.join(', ')}); name one in the account parameter.`);
 }
 
 const ascClients = new Map();
@@ -61,15 +72,16 @@ const playClients = new Map();
 function ascClient(name, c) {
   const missing = [!c.keyId && 'key ID', !c.issuerId && 'issuer ID', !c.privateKey && 'private key'].filter(Boolean);
   if (missing.length) throw new StoreError(`App Store Connect account "${name}" is missing its ${missing.join(', ')}. ${SETUP_HINT}`);
-  const key = JSON.stringify(c);
-  if (ascClients.get(name)?.key !== key) ascClients.set(name, { key, client: new AppStoreConnect(c) });
+  const fingerprint = JSON.stringify(c);
+  if (ascClients.get(name)?.fingerprint !== fingerprint) ascClients.set(name, { fingerprint, client: new AppStoreConnect(c) });
   return ascClients.get(name).client;
 }
 
 function playClient(name, c) {
   if (!c.serviceAccount) throw new StoreError(`Google Play account "${name}" has no service account key. ${SETUP_HINT}`);
-  if (playClients.get(name)?.key !== c.serviceAccount) {
-    playClients.set(name, { key: c.serviceAccount, client: new GooglePlay(c) });
+  const fingerprint = JSON.stringify(c);
+  if (playClients.get(name)?.fingerprint !== fingerprint) {
+    playClients.set(name, { fingerprint, client: new GooglePlay(c) });
   }
   return playClients.get(name).client;
 }

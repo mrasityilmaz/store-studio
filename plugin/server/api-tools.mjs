@@ -20,7 +20,7 @@ async function ascClientFor(path, account) {
   if (account || names.length <= 1) return asc(account);
   const appId = path.replace(/^https:\/\/api\.appstoreconnect\.apple\.com/, '').match(/^\/v\d+\/apps\/(\d+)(?:[/?]|$)/)?.[1];
   if (appId) return (await ascForApp(appId)).client;
-  throw new StoreError(`Several App Store Connect accounts are set up (${names.join(', ')}); pass account. asc_apps shows which account has which app.`);
+  throw new StoreError(`Several App Store Connect accounts are set up (${names.join(', ')}); name one in the account parameter. asc_apps shows which account has which app.`);
 }
 
 async function playClientFor(path, pkg, account) {
@@ -28,7 +28,7 @@ async function playClientFor(path, pkg, account) {
   if (account || names.length <= 1) return play(account);
   const found = pkg ?? path.match(/applications\/([^/:?]+)/)?.[1];
   if (found) return (await playForPackage(decodeURIComponent(found))).client;
-  throw new StoreError(`Several Google Play accounts are set up (${names.join(', ')}); pass account or package.`);
+  throw new StoreError(`Several Google Play accounts are set up (${names.join(', ')}); name one in the account parameter, or give the package.`);
 }
 
 // Money movement and account access stay in the store consoles.

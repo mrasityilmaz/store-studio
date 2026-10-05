@@ -103,9 +103,9 @@ assert.equal(r.listings[0].title, 'com.other.app');
 // Generic tools: the app in the path picks the account; otherwise ask.
 r = await run('asc_api_get', { path: '/v1/apps/222/customerReviews' });
 assert.equal(r.data[0].id, 'r1');
-await assert.rejects(run('asc_api_get', { path: '/v1/salesReports' }), /pass account/);
+await assert.rejects(run('asc_api_get', { path: '/v1/salesReports' }), /account parameter/);
 r = await run('play_api_get', { path: 'applications/com.other.app/edits/x/listings' }).catch((e) => e);
-assert.ok(!/pass account/.test(String(r)), 'package in the path picks the Play account');
+assert.ok(!/account parameter/.test(String(r)), 'package in the path picks the Play account');
 
 // setup_check shows slots and key IDs, never key contents.
 r = await run('setup_check', { live: false });
