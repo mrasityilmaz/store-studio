@@ -1,0 +1,4 @@
+.DS_Store
+node_modules/
+*.p8
+*service-account*.json
