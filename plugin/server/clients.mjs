@@ -6,7 +6,7 @@ import { SETTINGS_HINT, StoreError, clean } from './util.mjs';
 
 export const SETUP_HINT = SETTINGS_HINT;
 
-// The plugin settings as Claude Code passes them to this server: up to three
+// The plugin settings as Claude Code hands them to this server: up to three
 // accounts per store. Key contents come from the system's secure storage via
 // sensitive settings; nothing is read from files.
 // Each slot is [name, ...values] in the order of ASC_FIELDS / PLAY_FIELDS.

@@ -4,7 +4,7 @@ Manage your App Store and Google Play presence from Claude Code. store-studio
 checks, uploads, reorders and downloads screenshots for every locale and device,
 edits store text (name, subtitle, description, keywords, promotional text, release
 notes, Play title and descriptions), and teaches Claude how to design screenshot
-sets that pass both stores' rules on the first upload.
+sets that meet both stores' rules on the first upload.
 
 Beyond listings, it reaches every endpoint of both official APIs: Claude looks up
 Apple's OpenAPI reference and Google's discovery document, reads what it needs and
@@ -125,7 +125,7 @@ For step-by-step help creating the keys, ask Claude to "set up store-studio"
   are not available; use the store consoles for those.
 - Key files stay on your machine. Their contents are never sent or shown, and
   the tools refuse a key file as a request body or a download target, even if
-  its path is passed by mistake.
+  its path is given by mistake.
 
 ## Tools
 
@@ -201,7 +201,7 @@ skill walks through the fix.
   deleted as soon as `altool` finishes. Other systems get an error instead of a
   failed upload.
 - It gets your keys from the plugin settings, which Claude Code keeps in your
-  system's secure storage and passes to this process. It uses them only to sign
+  system's secure storage and hands to this process. It uses them only to sign
   short-lived tokens on your machine, and never logs, shows or sends the key
   contents. It doesn't read key files from your disk.
 - It reads the image folders and JSON body files you point it at, never a key

@@ -182,7 +182,7 @@ export async function ascDocs({ search, path, method, schema }) {
       }),
     };
   }
-  if (!search) throw new StoreError('Pass search, path or schema');
+  if (!search) throw new StoreError('Give search, path or schema');
   const hits = rank(index.ops, search, [['path', 3], ['id', 3], ['tags', 2], ['text', 1]]);
   return {
     api_version: index.version,
@@ -261,7 +261,7 @@ export async function playDocs({ search, id, path, method }) {
       })),
     };
   }
-  if (!search) throw new StoreError('Pass search, id or path');
+  if (!search) throw new StoreError('Give search, id or path');
   const hits = rank(index.methods, search, [['path', 3], ['id', 3], ['text', 1]]);
   return {
     revision: index.revision,

@@ -33,7 +33,7 @@ The Account Holder or an Admin does this once per team.
    works but grants more than needed. Sales and finance reports are limited to
    the Admin, Finance and Sales roles: if the user wants them, add a second key
    with the Finance role in the next free slot (for example named `acme-finance`)
-   and pass that account for report calls.
+   and use that account for report calls.
 3. Download the `.p8` file right away. Apple only offers the download once.
 4. Note the **Key ID** from the keys table and the **Issuer ID** shown above it.
 

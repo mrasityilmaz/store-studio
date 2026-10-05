@@ -14,7 +14,7 @@ description: Uses the full App Store Connect and Google Play Developer APIs thro
 2. **Read.** `asc_api_get` / `play_api_get`. Keep responses small: request only
    the fields you need (`fields[apps]=name,bundleId`), use `filter[...]` and `limit`
    (App Store max 200), and `include` for related data. Use `all_pages` to follow
-   `links.next`. For anything large, pass `save_to` and analyze the file locally.
+   `links.next`. For anything large, use `save_to` and analyze the file locally.
 3. **Change.** `asc_api_write` / `play_api_write`. Always dry-run first and show
    the user the request, the current state and the impact lines. Only run with
    `dry_run: false` after the user confirms that exact change in chat. For Play
@@ -105,8 +105,8 @@ Give a beta group a build with `POST /v1/betaGroups/{id}/relationships/builds`
 and `{"data": [{"type": "builds", "id": "…"}]}`, or put one build in several
 groups with `POST /v1/builds/{id}/relationships/betaGroups`. DELETE on the same
 paths takes the build away again. Testers may be notified, so confirm the group
-and build with the user. External groups only get a build once it passes beta
-app review (`POST /v1/betaAppReviewSubmissions`).
+and build with the user. External groups only get a build once beta app review
+approves it (`POST /v1/betaAppReviewSubmissions`).
 
 ### Other areas
 

@@ -1,6 +1,6 @@
 ---
 name: store-screenshots
-description: Designs and renders App Store and Google Play screenshot sets (every locale, phone and tablet) that look premium and pass both stores' rules, exported in the folder layout store-studio uploads. Use when the user wants new store screenshots, marketing frames, localized captions, device mockups, a feature graphic, or wants to fix screenshots a store rejected.
+description: Designs and renders App Store and Google Play screenshot sets (every locale, phone and tablet) that look premium and meet both stores' rules, exported in the folder layout store-studio uploads. Use when the user wants new store screenshots, marketing frames, localized captions, device mockups, a feature graphic, or wants to fix screenshots a store rejected.
 ---
 
 # Store screenshots
@@ -37,7 +37,7 @@ source.
 Two traps:
 
 - Play rejects any image whose long side is more than twice the short side.
-  Phone-shaped sizes like 1080x2400 fail; 1080x1920 passes.
+  Phone-shaped sizes like 1080x2400 fail; 1080x1920 is accepted.
 - One App Store folder per display type. 1284x2778 and 1242x2688 are both 6.5",
   so render only one of them.
 

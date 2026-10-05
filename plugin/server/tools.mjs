@@ -327,7 +327,7 @@ export const tools = [
         const iloc = infoLocs.find((l) => l.locale === c.locale);
         const step = { locale: c.locale, fields: [], version: {}, info: {} };
         if (!loc && !create_missing_locales) {
-          step.skipped = `${c.locale} is not on version ${version.version}; pass create_missing_locales to add it`;
+          step.skipped = `${c.locale} is not on version ${version.version}; set create_missing_locales to add it`;
           plan.push(step);
           continue;
         }
@@ -382,7 +382,7 @@ export const tools = [
   {
     name: 'asc_screenshots_push',
     description:
-      'Replaces App Store screenshots from a local folder (<dir>/<locale>/<folder>/*.png) on the version being prepared. Only the display types present locally are touched; each is emptied and refilled in file-name order. Dry run by default. Large sets: pass a few locales per call.',
+      'Replaces App Store screenshots from a local folder (<dir>/<locale>/<folder>/*.png) on the version being prepared. Only the display types present locally are touched; each is emptied and refilled in file-name order. Dry run by default. Large sets: send a few locales per call.',
     inputSchema: {
       type: 'object',
       required: ['app', 'dir'],
@@ -412,7 +412,7 @@ export const tools = [
       for (const l of scan.locales) {
         const loc = remote.find((r) => r.locale === l.locale);
         if (!loc && !create_missing_locales) {
-          plan.push({ locale: l.locale, skipped: `not on version ${version.version}; pass create_missing_locales to add it` });
+          plan.push({ locale: l.locale, skipped: `not on version ${version.version}; set create_missing_locales to add it` });
           continue;
         }
         const sets = loc ? await client.screenshotSets(loc.id) : [];

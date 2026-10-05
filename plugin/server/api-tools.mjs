@@ -117,7 +117,7 @@ async function target(save_to, overwrite, fallbackName) {
   if (KEY_FILE.test(file)) throw keyFileError(file);
   const existing = await stat(file).catch(() => null);
   if (existing) {
-    if (!overwrite) throw new StoreError(`${file} already exists; pass overwrite: true or pick another path`);
+    if (!overwrite) throw new StoreError(`${file} already exists; set overwrite to true or pick another path`);
     // A key saved under another name is still never written over.
     if (!existing.isFile() || (existing.size < 65536 && PRIVATE_KEY.test(await readFile(file, 'utf8')))) throw keyFileError(file);
   }

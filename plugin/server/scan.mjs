@@ -74,7 +74,7 @@ export async function scanAsc(dir, { locales, devices } = {}) {
       const prev = seen.get(set.displayType);
       if (prev) {
         set.errors.push(
-          `"${prev}" and "${set.folder}" both map to ${set.displayType} (${ASC_DISPLAY_TYPES[set.displayType].label}); keep one or pass devices`,
+          `"${prev}" and "${set.folder}" both map to ${set.displayType} (${ASC_DISPLAY_TYPES[set.displayType].label}); keep one, or choose one with devices`,
         );
       }
       seen.set(set.displayType, set.folder);

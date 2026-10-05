@@ -5,7 +5,7 @@ store-studio runs entirely on your machine as a local process started by Claude 
 - **No data collection.** It has no telemetry, analytics or server of its own.
 - **Credentials.** You paste your App Store Connect `.p8` key and Google Play
   service account key into the plugin settings, which keep them in your
-  system's secure credential store (the Keychain on a Mac). Claude Code passes
+  system's secure credential store (the Keychain on a Mac). Claude Code hands
   them to the local store-studio process, which uses them only to sign
   short-lived access tokens. Key contents are never logged, shown to Claude or
   sent anywhere; only the signed tokens go to Apple and Google. The one

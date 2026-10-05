@@ -90,8 +90,8 @@ export async function readIpa(ipa) {
   }
 }
 
-// altool looks for AuthKey_<id>.p8 in a few fixed folders. Passing the
-// configured path makes the same plugin options work on every Mac.
+// altool looks for AuthKey_<id>.p8 in a few fixed folders; naming the key
+// file on the command line works on every Mac.
 // Apple reuses one iris code for many fields. The pointer says which field.
 const ALTOOL_HINTS = [
   {

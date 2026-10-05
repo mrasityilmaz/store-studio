@@ -8,7 +8,7 @@ description: Safely uploads screenshots and edits store text on App Store Connec
 ## Safety rules
 
 - Every tool that changes a store runs as a dry run unless `dry_run: false` is
-  passed. Always run the dry run first, show the user the plan (what gets
+  set. Always run the dry run first, show the user the plan (what gets
   replaced, per locale and device, and any skipped items), and only run for real
   after the user clearly says yes in chat.
 - One confirmation covers the plan that was shown. If the plan changes (other
@@ -40,7 +40,7 @@ export/
 
 On the App Store, the pixel size picks the display type, so an iPhone folder can
 have any name. Two folders that map to the same display type (for example
-1284x2778 and 1242x2688, both 6.5") conflict. Pass `devices` to choose one, or
+1284x2778 and 1242x2688, both 6.5") conflict. Use `devices` to choose one, or
 name the folder after the display type (`APP_IPHONE_67`) to force it.
 
 For a big batch, push a few locales per call (`locales: [...]`) so each call

@@ -89,7 +89,7 @@ export function assertHost(url, domains) {
   if (!ok) throw new StoreError(`Refusing unexpected URL host: ${u.hostname}`);
 }
 
-// A plugin setting as Claude Code passes it: unset ones can arrive empty or
+// A plugin setting as Claude Code hands it over: unset ones can arrive empty or
 // as the literal placeholder.
 export function clean(value) {
   const s = (value ?? '').trim();
