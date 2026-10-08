@@ -8,8 +8,10 @@ import { imageInfo } from '../plugin/server/image.mjs';
 import { explainAltool, macOnlyReason } from '../plugin/server/ipa.mjs';
 import { scanAsc, scanPlay } from '../plugin/server/scan.mjs';
 
-// Tests start with no store accounts; each file sets the ones it needs.
+// Tests start with no store accounts and never see the real accounts file;
+// each file sets the ones it needs.
 for (const name of Object.keys(process.env)) if (/^(ASC|PLAY)_/.test(name)) delete process.env[name];
+process.env.HOME = mkdtempSync(join(tmpdir(), 'store-studio-home-'));
 
 const tmp = mkdtempSync(join(tmpdir(), 'store-studio-scan-'));
 makeTree(tmp, {
@@ -71,3 +73,4 @@ await import('./mock-stores.mjs');
 await import('./api-tools.mjs');
 await import('./hardening.mjs');
 await import('./accounts.mjs');
+await import('./account-add.mjs');

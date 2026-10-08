@@ -82,7 +82,7 @@ export const tools = [
   {
     name: 'setup_check',
     description:
-      'Shows every App Store Connect and Google Play account set in the plugin settings (up to three per store) and tests each one: which apps it sees, and Play access to a package. Never prints key contents. Use it first, and when a store tool reports a setup or permission problem.',
+      'Shows every App Store Connect and Google Play account, whether connected in the chat (account_add) or set in the plugin settings, and tests each one: which apps it sees, and Play access to a package. Never prints key contents. Use it first, and when a store tool reports a setup or permission problem.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -92,9 +92,9 @@ export const tools = [
     },
     async run({ live = true, package: pkg }) {
       const all = accounts();
-      const out = { settings: '/plugin > Installed > store-studio > Configure options', app_store: {}, google_play: {} };
+      const out = { app_store: {}, google_play: {} };
       for (const [name, a] of Object.entries(all.asc)) {
-        const row = { slot: a.slot, key_id: a.keyId ?? null };
+        const row = { source: a.source, key_id: a.keyId ?? null, ...(a.keyPath && { key_file: a.keyPath }) };
         if (live) {
           try {
             row.apps = (await asc(name).apps()).map((x) => `${x.name} (${x.bundleId})`);
@@ -107,7 +107,7 @@ export const tools = [
         out.app_store[name] = row;
       }
       for (const [name, a] of Object.entries(all.play)) {
-        const row = { slot: a.slot };
+        const row = { source: a.source, ...(a.serviceAccountPath && { key_file: a.serviceAccountPath }) };
         try {
           const client = play(name);
           row.service_account = (await client.account()).client_email;
@@ -184,14 +184,22 @@ export const tools = [
 
   {
     name: 'asc_apps',
-    description: 'Lists the apps in every configured App Store Connect account, with the account each one belongs to.',
+    description: 'Lists the apps in every configured App Store Connect account, with the account each one belongs to. An account that can\'t sign in gets a row with its error.',
     inputSchema: { type: 'object', properties: { account: S.account } },
     async run({ account }) {
       const names = account ? [account] : Object.keys(accounts().asc);
       if (!names.length) asc();
       const rows = [];
       for (const name of names) {
-        for (const a of await asc(name).apps()) {
+        let apps;
+        try {
+          apps = await asc(name).apps();
+        } catch (err) {
+          if (account) throw err;
+          rows.push({ account: name, error: err.message });
+          continue;
+        }
+        for (const a of apps) {
           rows.push({ account: name, name: a.name, bundle_id: a.bundleId, apple_id: a.id, primary_locale: a.primaryLocale });
         }
       }
@@ -719,7 +727,7 @@ export const tools = [
   {
     name: 'asc_ipa_upload',
     description:
-      'Uploads an iOS .ipa with Xcode altool (xcrun). macOS only: on any other system it stops and says so. Uses the configured App Store Connect key, so the same plugin options work on every Mac that has Xcode. Dry run by default. Apple rejects a build number that was already uploaded.',
+      'Uploads an iOS .ipa with Xcode altool (xcrun). macOS only: on any other system it stops and says so. Uses the App Store Connect account\'s key (connected in the chat or in the plugin settings), so it works on every Mac that has Xcode. Dry run by default. Apple rejects a build number that was already uploaded.',
     inputSchema: {
       type: 'object',
       required: ['ipa'],

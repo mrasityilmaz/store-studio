@@ -1,7 +1,7 @@
 import { createPrivateKey, sign } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { ASC_EDITABLE } from './specs.mjs';
-import { SETTINGS_HINT, StoreError, assertHost, assertPlainPath, b64url, fetchRetry, md5, pemKey, sleep } from './util.mjs';
+import { StoreError, assertHost, assertPlainPath, b64url, fetchRetry, md5, pemKey, setupHint, sleep } from './util.mjs';
 
 const BASE = 'https://api.appstoreconnect.apple.com';
 
@@ -22,23 +22,32 @@ export const INFO_FIELDS = {
 };
 
 export class AppStoreConnect {
-  // privateKey: the .p8 contents from the plugin settings.
-  constructor({ keyId, issuerId, privateKey }) {
+  // The key comes from the plugin settings (privateKey, the .p8 contents) or,
+  // for an account connected in the chat, from its file (keyPath).
+  constructor({ keyId, issuerId, privateKey, keyPath }) {
     this.keyId = keyId;
     this.issuerId = issuerId;
     this.privateKey = privateKey;
+    this.keyPath = keyPath;
   }
 
   async token() {
     const now = Math.floor(Date.now() / 1000);
     if (this.jwt && this.jwtExp - now > 60) return this.jwt;
     if (!this.key) {
-      const what = `The App Store Connect private key for key ID ${this.keyId}`;
-      const pem = pemKey(this.privateKey, what);
+      const fromFile = Boolean(this.keyPath);
+      const what = fromFile ? `The key file ${this.keyPath}` : `The App Store Connect private key for key ID ${this.keyId}`;
+      const hint = fromFile ? 'Connect the account again with account_add, giving the downloaded AuthKey .p8 file.' : setupHint();
+      const text = fromFile
+        ? await readFile(this.keyPath, 'utf8').catch(() => {
+            throw new StoreError(`Can't read the App Store Connect key file ${this.keyPath}. ${hint}`);
+          })
+        : this.privateKey;
       try {
-        this.key = createPrivateKey(pem);
-      } catch {
-        throw new StoreError(`${what} isn't a valid .p8 key. Paste the whole AuthKey file again. ${SETTINGS_HINT}`);
+        this.key = createPrivateKey(pemKey(text, what, hint));
+      } catch (err) {
+        if (err instanceof StoreError) throw err;
+        throw new StoreError(`${what} isn't a valid .p8 key. ${hint}`);
       }
     }
     // Apple allows at most 20 minutes.

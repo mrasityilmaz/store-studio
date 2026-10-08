@@ -4,8 +4,8 @@ import { mkdtemp, rm, writeFile, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { SETUP_HINT, accounts, ascForApp } from './clients.mjs';
-import { StoreError, pemKey } from './util.mjs';
+import { accounts, ascForApp } from './clients.mjs';
+import { StoreError, pemKey, setupHint } from './util.mjs';
 
 const exec = promisify(execFile);
 
@@ -30,17 +30,19 @@ async function xcrun() {
 // The account that can see the app inside the IPA, with its key.
 async function credentials(bundleId, account) {
   const { account: name } = await ascForApp(bundleId, account);
-  const { keyId, issuerId, privateKey } = accounts().asc[name];
-  const missing = [!keyId && 'key ID', !issuerId && 'issuer ID', !privateKey && 'private key'].filter(Boolean);
+  const { keyId, issuerId, privateKey, keyPath } = accounts().asc[name];
+  const missing = [!keyId && 'key ID', !issuerId && 'issuer ID', !privateKey && !keyPath && 'private key'].filter(Boolean);
   if (missing.length) {
-    throw new StoreError(`App Store Connect account "${name}" is missing its ${missing.join(', ')}. ${SETUP_HINT}`);
+    throw new StoreError(`App Store Connect account "${name}" is missing its ${missing.join(', ')}. ${setupHint()}`);
   }
-  return { account: name, keyId, issuerId, privateKey };
+  return { account: name, keyId, issuerId, privateKey, keyPath };
 }
 
-// altool only reads keys from files: a copy in a fresh folder only this user
-// can open, deleted as soon as altool exits.
+// altool only reads keys from files. An account connected in the chat already
+// has one; for a key from the plugin settings, a copy goes into a fresh folder
+// only this user can open and is deleted as soon as altool exits.
 async function withKeyFile(creds, fn) {
+  if (creds.keyPath) return fn(creds.keyPath);
   const dir = await mkdtemp(join(tmpdir(), 'store-studio-'));
   try {
     const file = join(dir, `AuthKey_${creds.keyId}.p8`);

@@ -8,6 +8,8 @@ import assert from 'node:assert/strict';
 import { makeTree } from './fixtures.mjs';
 
 const tmp = mkdtempSync(join(tmpdir(), 'store-studio-'));
+// A throwaway home: never the real accounts file or keys, even when run on its own.
+process.env.HOME = tmp;
 const ec = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
 const rsa = generateKeyPairSync('rsa', { modulusLength: 2048 });
 // The plugin settings, as Claude Code passes them. The .p8 arrives with its

@@ -23,8 +23,10 @@ Node.js: no fastlane, no Ruby, no npm packages.
 1. Install the plugin ([Install](#install)).
 2. Create an App Store Connect API key, a Google Play service account, or both,
    and download the key file ([Set up](#set-up) shows where to click).
-3. Enter them in the plugin settings: `/plugin` → **Installed** → **store-studio**
-   → **Configure options** ([Set up](#set-up) shows each field).
+3. Tell Claude: *"Connect my App Store account, the key is in
+   ~/Downloads/AuthKey_ABC123.p8, issuer ID …"* (or *"Connect my Google Play
+   account"* with the `.json` file). Claude shows what it will do, and after you
+   say yes the account is ready, in every Claude Code app.
 4. Ask for what you need, for example *"Show my App Store subtitle and keywords
    for every language."*
 
@@ -82,43 +84,50 @@ Then restart Claude Code so the new version starts.
    you download it only once). Note the **Key ID** and the **Issuer ID** shown
    above the keys list. App Manager covers listings, screenshots, versions,
    builds and TestFlight. Sales and finance reports are limited to the Admin,
-   Finance and Sales roles; if you want those, add a second key with the Finance
-   role in the next account slot.
+   Finance and Sales roles; if you want those, create a second key with the
+   Finance role and connect it as its own account (for example `acme-finance`).
 2. **Google Play (optional):** in Google Cloud Console, enable the Google Play
    Android Developer API, create a service account and download its JSON key.
    Then in Play Console → Users and permissions, invite the service account's
    e-mail and give it access to your app.
-3. **Enter them in the plugin settings.** In Claude Code in a terminal, run
-   `/plugin`, open **store-studio** on the **Installed** tab and choose
-   **Configure options**:
-   - App Store Connect: the key ID and issuer ID, then open the `.p8` file in a
-     text editor, copy all of it (including the BEGIN and END lines) and paste
-     it into **private key**.
-   - Google Play: open the service account `.json` file the same way and paste
-     all of it into **service account key**.
-   - Optionally a short name per account, such as `acme`.
+3. **Connect them in the chat.** Tell Claude *"Connect my App Store account"*
+   and give the `.p8` file's path and the Issuer ID (the Key ID comes from the
+   `AuthKey_<KEYID>.p8` file name), or *"Connect my Google Play account"* with
+   the `.json` file's path. Claude runs `account_add`, which first shows its
+   plan without opening the file. After you confirm, it:
+   - reads the key once to check it,
+   - moves it into a private folder readable only by you
+     (`~/.appstoreconnect/` or `~/.config/store-studio/play/`),
+   - records the account name, IDs and the key's path (never its contents) in
+     `~/.config/store-studio/accounts.json`,
+   - signs in to test it: for App Store Connect it lists the apps the key can
+     see; for Google Play it checks the sign-in and, if you name an app's
+     package, access to that app.
 
-   The key fields are masked and stored in your system's secure storage (the
-   Keychain on a Mac), not in a settings file. The settings are shared with the
-   desktop app and IDE extensions.
+   This works the same in the terminal, the Claude desktop app and IDEs, and you
+   never paste key contents anywhere. Connect as many teams and developer
+   accounts as you have; tools find the account that can see each app on their
+   own. `account_remove` disconnects one again.
+4. Ask Claude to "check my store-studio setup". `setup_check` signs in to every
+   account and lists the App Store apps each one sees.
 
-   **Using the Claude desktop app?** It has no screen for plugin settings yet.
-   Open its Terminal panel (or any terminal), run `claude`, and use `/plugin` as
-   above; the desktop app picks the settings up in its next new session. To
-   script it instead, `claude plugin configure store-studio@store-studio
-   --values-stdin` reads a JSON object of single-line values (`claude plugin
-   configure store-studio@store-studio` alone shows which are set).
-4. Restart Claude Code (or run `/reload-plugins`) and ask Claude to "check my
-   store-studio setup". `setup_check` signs in to every account and lists the
-   apps it can see.
+**Prefer the plugin settings?** They hold up to two accounts per store, with
+the keys in your system's secure storage (the Keychain on a Mac). In Claude
+Code in a terminal: `/plugin` → **Installed** → **store-studio** → **Configure
+options**. Two things to know:
+- The form keeps only the first line of whatever you paste, so enter each key
+  as one line (for example, join the lines of the `.p8` in a text editor first).
+- The Claude desktop app has no settings screen; enter them from a terminal and
+  start a new desktop session. Settings don't reach a copy of store-studio that
+  was loaded from a local folder.
 
-There are three account slots per store, for several App Store Connect teams or
-Play developer accounts. Tools find the account that can see each app on their
-own. Never paste key contents into the chat; they only belong in the settings
-dialog.
+Never paste key contents into the chat. For step-by-step help creating the
+keys, ask Claude to "set up store-studio" (the `store-setup` skill).
 
-For step-by-step help creating the keys, ask Claude to "set up store-studio"
-(the `store-setup` skill).
+**Upgrading from 0.6?** The plugin settings now have two account slots per
+store instead of three. An account you had in a third slot is no longer used:
+connect it in the chat instead. Accounts connected with `account_add` in 0.5
+(`~/.config/store-studio/accounts.json`) work again without any change.
 
 ## Safe by default
 
@@ -130,15 +139,18 @@ For step-by-step help creating the keys, ask Claude to "set up store-studio"
   review, unless you ask Claude to send them.
 - Refunds, purchase revocations, order actions and user or permission management
   are not available; use the store consoles for those.
-- Key files stay on your machine. Their contents are never sent or shown, and
-  the tools refuse a key file as a request body or a download target, even if
-  its path is given by mistake.
+- Key files stay on your machine. `account_add` opens one only after you
+  confirm, and only the path you gave. Key contents are never sent or shown,
+  and the tools refuse a key file as a request body or a download target, even
+  if its path is given by mistake.
 
 ## Tools
 
 | Tool | Changes a store | What it does |
 | - | - | - |
-| `setup_check` | no | Shows the accounts in the plugin settings and tests sign-in |
+| `account_add` | no (writes local files) | Connects an account from a downloaded key file: dry run first, then moves the key to a private folder, records its path, tests it |
+| `account_remove` | no (writes local files) | Disconnects an account connected in the chat; the key file stays |
+| `setup_check` | no | Shows every account (connected in the chat or in the settings) and tests sign-in |
 | `screenshots_validate` | no | Checks a local folder: sizes, display slots, alpha, counts, Play's 2:1 rule |
 | `asc_apps` | no | Lists apps in the App Store Connect team |
 | `asc_status` | no | Versions, editable version, locales and screenshot counts |
@@ -181,10 +193,13 @@ display type (for example `APP_IPHONE_67`) to force it when a size fits more tha
 | Problem | What to do |
 | - | - |
 | "store-studio needs Node.js 22 or newer", or the tools are missing | Install a current Node.js from [nodejs.org](https://nodejs.org), then restart Claude Code |
-| "isn't set up" | Enter the account in the plugin settings, then restart Claude Code |
-| "loaded from a local folder" | The desktop app (or `--plugin-dir`) loaded store-studio from a folder on disk and gives it none of the saved settings. Install it from GitHub or the plugin directory, enter the settings again and start a new session |
-| "holds a file path" | A setting from an older version holds the key's path; paste the file's contents instead |
-| App Store 401 | The key ID, issuer ID and pasted key don't belong together, or the key was revoked. Check them in the plugin settings |
+| "isn't set up" | Connect the account in the chat (*"Connect my App Store account"*), or enter it in the plugin settings and start a new session |
+| "only its first line was saved" | The terminal settings form kept one line of a pasted key. Connect the account in the chat instead, or enter the key as one line |
+| "loaded from a local folder" | The desktop app (or `--plugin-dir`) loaded store-studio from a folder on disk and gives it none of the saved settings. Connect the account in the chat, or install from GitHub or the plugin directory |
+| "Can't read the App Store Connect key file" / "Can't read the Google Play service account file" | The key file of an account connected in the chat moved or was deleted. Connect it again with the file's new path |
+| "is not a valid .p8 private key" / "is not valid JSON" / "is not a Google service account key" | `account_add` was given a file that isn't the downloaded key; give it the `AuthKey_….p8` or the service account `.json` |
+| "holds a file path" | A plugin setting holds the key's path instead of its contents; connect the account in the chat instead |
+| App Store 401 | The key ID, issuer ID and key don't belong together, or the key was revoked. Connect the account again in the chat (with `replace` set to true), or check it in the plugin settings |
 | App Store 403 | The key's role is too low: App Manager for listing work; Admin, Finance or Sales for sales and finance reports |
 | Google Play 403 | Invite the service account in Play Console (Users and permissions) with access to the app, and enable the Google Play Android Developer API in its Cloud project |
 | A Play change doesn't show up | It is waiting in Play Console: send it for review from Publishing overview, or ask Claude to send it |
@@ -205,17 +220,24 @@ skill walks through the fix.
 - It runs one local process: `node server/index.mjs`, started by Claude Code over stdio.
 - On a Mac, `asc_ipa_upload` also runs `xcrun altool` after you confirm. That
   ships with Xcode and sends the `.ipa` to Apple. `altool` reads keys only from
-  files, so for that upload the key is written to a private temporary folder and
-  deleted as soon as `altool` finishes. Other systems get an error instead of a
-  failed upload.
-- It gets your keys from the plugin settings, which Claude Code keeps in your
-  system's secure storage and hands to this process. It uses them only to sign
-  short-lived tokens on your machine, and never logs, shows or sends the key
-  contents. It doesn't read key files from your disk.
+  files: an account connected in the chat gives it its own key file, and for a
+  key from the plugin settings a copy goes into a private temporary folder and
+  is deleted as soon as `altool` finishes. Other systems get an error instead
+  of a failed upload.
+- It gets your keys in one of two ways: from a key file you connected in the
+  chat with `account_add` (it opens only the path you gave, after you confirm,
+  and later reads that file to sign in), or from the plugin settings, which
+  Claude Code keeps in your system's secure storage and hands to this process.
+  It uses keys only to sign short-lived tokens on your machine, and never logs,
+  shows or sends the key contents. Only the signed tokens go to Apple and
+  Google.
 - It reads the image folders and JSON body files you point it at, never a key
   file as a request body. It writes downloads and reports only to the paths
   you name (never overwriting without `overwrite: true`, and never over a key
-  file), or to its own data folder.
+  file), or to its own data folder. `account_add`, after you confirm, moves the
+  key file you named into `~/.appstoreconnect/` or
+  `~/.config/store-studio/play/` and writes `~/.config/store-studio/accounts.json`
+  (IDs and paths only); both stay when you uninstall the plugin.
 - It caches the two public API references in its data folder
   (`~/.claude/plugins/data/…`) and refreshes them every one to two weeks.
 - It never runs code it receives. The generic tools send one request each, only

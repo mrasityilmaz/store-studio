@@ -99,32 +99,43 @@ export function clean(value) {
 // Cache for downloaded API references and report files.
 export const dataDir = () => clean(process.env.STORE_STUDIO_DATA) ?? join(homedir(), '.cache', 'store-studio');
 
+// How to connect an account. In the chat is the way that works in every Claude
+// Code app; the plugin settings are the other.
+export const CONNECT_HINT =
+  'Connect it in the chat: say "connect my App Store account" (or Google Play) and give the downloaded key file\'s path, plus the Issuer ID for App Store Connect. Claude runs account_add, which shows its plan first and reads the file only after you confirm.';
+
 export const SETTINGS_HINT =
-  'Add it in the plugin settings: run /plugin, open store-studio on the Installed tab and choose Configure options (the store-setup skill walks through it). Key contents go into that dialog, never into the chat.';
+  'Or enter it in the plugin settings: in Claude Code in a terminal, /plugin > Installed > store-studio > Configure options (the Claude desktop app has no settings screen). Key contents never go into the chat.';
 
 // Claude Code files saved settings under the installed plugin's id. A copy
 // loaded from a local folder (a directory marketplace in the desktop app, or
 // --plugin-dir) runs as <name>@inline and gets none of them; its data folder
-// name gives that away.
+// name gives that away. Accounts connected in the chat don't depend on it.
 export const loadedFromFolder = () => /-inline$/.test(dataDir());
 
 export const FOLDER_HINT =
-  'store-studio was loaded from a local folder (a local marketplace in the Claude desktop app, or --plugin-dir), and Claude Code gives a plugin loaded that way none of its saved settings. Install it from its GitHub or plugin-directory marketplace instead (for example: claude plugin marketplace add mrasityilmaz/store-studio, then claude plugin install store-studio@store-studio), enter the settings again, and start a new session.';
+  'Plugin settings don\'t reach this copy: it was loaded from a local folder (a local marketplace in the Claude desktop app, or --plugin-dir), and Claude Code gives a plugin loaded that way none of its saved settings. Connecting in the chat works here.';
 
-export const setupHint = () => (loadedFromFolder() ? `${FOLDER_HINT} ` : '') + SETTINGS_HINT;
+export const setupHint = () => `${CONNECT_HINT} ${loadedFromFolder() ? FOLDER_HINT : SETTINGS_HINT}`;
 
-// A private key pasted into the plugin settings, as PEM. Pasting can turn line
-// breaks into spaces or literal \n, or drop the BEGIN/END lines, so the base64
-// body is re-wrapped. `what` names the setting in errors; the value is never quoted.
-export function pemKey(text, what) {
+// The terminal settings form keeps only the first line of a paste.
+export const FIRST_LINE_ONLY =
+  'only its first line was saved (the terminal settings form keeps one line of whatever is pasted). Connect the account in the chat with the key file\'s path instead, or paste the key as a single line.';
+
+// A private key as PEM, from the plugin settings or a key file. Pasting can
+// turn line breaks into spaces or literal \n, or drop the BEGIN/END lines, so
+// the base64 body is re-wrapped. `what` names the source in errors and `hint`
+// says how to fix it; the value is never quoted.
+export function pemKey(text, what, hint = SETTINGS_HINT) {
   const s = String(text ?? '').replace(/\\n/g, '\n').trim();
   if (/^[~/]/.test(s) || /^[A-Za-z]:\\/.test(s)) {
-    throw new StoreError(`${what} holds a file path. Paste the contents of the key file instead. ${SETTINGS_HINT}`);
+    throw new StoreError(`${what} holds a file path, not a key. ${CONNECT_HINT}`);
   }
+  if (/^-----BEGIN [A-Z ]*PRIVATE KEY-----$/.test(s)) throw new StoreError(`${what}: ${FIRST_LINE_ONLY}`);
   const label = s.match(/-----BEGIN ([A-Z ]*PRIVATE KEY)-----/)?.[1] ?? 'PRIVATE KEY';
   const body = s.replace(/-----(BEGIN|END) [A-Z ]*PRIVATE KEY-----/g, '').replace(/\s+/g, '');
   if (!/^[A-Za-z0-9+/]+=*$/.test(body)) {
-    throw new StoreError(`${what} isn't a private key. Paste the whole key, including the BEGIN and END lines. ${SETTINGS_HINT}`);
+    throw new StoreError(`${what} isn't a private key. ${hint}`);
   }
   return `-----BEGIN ${label}-----\n${body.match(/.{1,64}/g).join('\n')}\n-----END ${label}-----\n`;
 }
