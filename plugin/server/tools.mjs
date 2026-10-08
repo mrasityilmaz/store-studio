@@ -3,7 +3,6 @@ import { isAbsolute, join, resolve } from 'node:path';
 import { INFO_FIELDS, VERSION_FIELDS, imageUrl } from './asc.mjs';
 import {
   CONFIRM,
-  SETUP_HINT,
   accounts,
   asc,
   ascForApp,
@@ -16,7 +15,7 @@ import { LISTING_FIELDS } from './play.mjs';
 import { uploadIpa } from './ipa.mjs';
 import { describeFiles, scanAsc, scanPlay } from './scan.mjs';
 import { ASC_DISPLAY_TYPES, ASC_LIMITS, ASC_LIVE, ASC_PLATFORMS, PLAY_IMAGE_TYPES, PLAY_LIMITS } from './specs.mjs';
-import { StoreError, assertHost, charCount, fetchRetry, pool } from './util.mjs';
+import { StoreError, assertHost, charCount, fetchRetry, pool, setupHint } from './util.mjs';
 
 // ---------------------------------------------------------------- helpers
 
@@ -126,7 +125,7 @@ export const tools = [
         }
         out.google_play[name] = row;
       }
-      if (!Object.keys(all.asc).length || !Object.keys(all.play).length) out.hint = SETUP_HINT;
+      if (!Object.keys(all.asc).length || !Object.keys(all.play).length) out.hint = setupHint();
       return out;
     },
   },

@@ -1,6 +1,6 @@
 {
   "name": "store-studio",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Manage App Store Connect and Google Play from Claude Code: upload, reorder and download screenshots for every locale and device, edit store text, upload builds (.ipa on a Mac, .aab anywhere) with staged rollouts, manage TestFlight, and reach every other endpoint of both official APIs (versions, review submissions, phased releases, pricing, reviews, analytics and sales reports, tracks, Data safety) through reference lookup, reads and confirmed writes. Up to three App Store Connect teams and three Play accounts, set up in the plugin settings with your own API keys; keys stay in your system's secure storage.",
   "author": {
     "name": "Muhammed Raşit Yılmaz",

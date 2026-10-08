@@ -101,6 +101,13 @@ Then restart Claude Code so the new version starts.
    The key fields are masked and stored in your system's secure storage (the
    Keychain on a Mac), not in a settings file. The settings are shared with the
    desktop app and IDE extensions.
+
+   **Using the Claude desktop app?** It has no screen for plugin settings yet.
+   Open its Terminal panel (or any terminal), run `claude`, and use `/plugin` as
+   above; the desktop app picks the settings up in its next new session. To
+   script it instead, `claude plugin configure store-studio@store-studio
+   --values-stdin` reads a JSON object of single-line values (`claude plugin
+   configure store-studio@store-studio` alone shows which are set).
 4. Restart Claude Code (or run `/reload-plugins`) and ask Claude to "check my
    store-studio setup". `setup_check` signs in to every account and lists the
    apps it can see.
@@ -175,6 +182,7 @@ display type (for example `APP_IPHONE_67`) to force it when a size fits more tha
 | - | - |
 | "store-studio needs Node.js 22 or newer", or the tools are missing | Install a current Node.js from [nodejs.org](https://nodejs.org), then restart Claude Code |
 | "isn't set up" | Enter the account in the plugin settings, then restart Claude Code |
+| "loaded from a local folder" | The desktop app (or `--plugin-dir`) loaded store-studio from a folder on disk and gives it none of the saved settings. Install it from GitHub or the plugin directory, enter the settings again and start a new session |
 | "holds a file path" | A setting from an older version holds the key's path; paste the file's contents instead |
 | App Store 401 | The key ID, issuer ID and pasted key don't belong together, or the key was revoked. Check them in the plugin settings |
 | App Store 403 | The key's role is too low: App Manager for listing work; Admin, Finance or Sales for sales and finance reports |

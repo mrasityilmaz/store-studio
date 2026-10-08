@@ -102,6 +102,17 @@ export const dataDir = () => clean(process.env.STORE_STUDIO_DATA) ?? join(homedi
 export const SETTINGS_HINT =
   'Add it in the plugin settings: run /plugin, open store-studio on the Installed tab and choose Configure options (the store-setup skill walks through it). Key contents go into that dialog, never into the chat.';
 
+// Claude Code files saved settings under the installed plugin's id. A copy
+// loaded from a local folder (a directory marketplace in the desktop app, or
+// --plugin-dir) runs as <name>@inline and gets none of them; its data folder
+// name gives that away.
+export const loadedFromFolder = () => /-inline$/.test(dataDir());
+
+export const FOLDER_HINT =
+  'store-studio was loaded from a local folder (a local marketplace in the Claude desktop app, or --plugin-dir), and Claude Code gives a plugin loaded that way none of its saved settings. Install it from its GitHub or plugin-directory marketplace instead (for example: claude plugin marketplace add mrasityilmaz/store-studio, then claude plugin install store-studio@store-studio), enter the settings again, and start a new session.';
+
+export const setupHint = () => (loadedFromFolder() ? `${FOLDER_HINT} ` : '') + SETTINGS_HINT;
+
 // A private key pasted into the plugin settings, as PEM. Pasting can turn line
 // breaks into spaces or literal \n, or drop the BEGIN/END lines, so the base64
 // body is re-wrapped. `what` names the setting in errors; the value is never quoted.

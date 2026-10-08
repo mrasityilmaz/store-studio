@@ -56,7 +56,9 @@ Tell the user to:
 
 1. In Claude Code in a terminal (`claude`), run `/plugin`, go to the
    **Installed** tab, open **store-studio** and choose **Configure options**.
-   The settings are shared with the desktop app and IDE extensions.
+   The settings are shared with the desktop app and IDE extensions. The Claude
+   desktop app has no screen for plugin settings yet: there, have the user open
+   the app's Terminal panel, run `claude` and do the same.
 2. App Store Connect: fill in **key ID** and **issuer ID**. Then open the
    downloaded `AuthKey_XXXXXXXXXX.p8` in a text editor, select all, copy, and
    paste it into **private key**, including the BEGIN and END lines.
@@ -82,6 +84,7 @@ as above. The old files are no longer read.
 | - | - |
 | "store-studio needs Node.js 22 or newer", or no store-studio tools | Node.js is missing or too old; install a current one from nodejs.org and restart Claude Code |
 | "isn't set up" | No account in the settings yet, or Claude Code wasn't restarted after saving them |
+| "loaded from a local folder" | The plugin came from a folder on disk (a local marketplace in the desktop app, or `--plugin-dir`), so Claude Code gives it none of the saved settings. Reinstall it from GitHub or the plugin directory, enter the settings again and start a new session |
 | "holds a file path" | An old setting holds the key's path; paste the file's contents instead |
 | "isn't a private key" / "isn't valid JSON" | Only part of the file was pasted; paste the whole file again |
 | App Store 401 | Wrong Key ID or Issuer ID, a revoked key, or a `.p8` from another team |

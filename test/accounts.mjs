@@ -131,4 +131,19 @@ assert.ok((await new GooglePlay({ serviceAccount: JSON.stringify({ type: 'servic
 process.env.ASC_3_KEY_ID = 'K3';
 assert.throws(() => asc('app-store-3'), /"app-store-3" is missing its issuer ID, private key/);
 
+// Loaded from a local folder (data folder ends in -inline), Claude Code gives
+// the plugin none of its saved settings; setup_check says why and what to do.
+const saved = Object.fromEntries(Object.entries(process.env).filter(([k]) => /^(ASC|PLAY)_/.test(k)));
+for (const k of Object.keys(saved)) delete process.env[k];
+const data = process.env.STORE_STUDIO_DATA;
+process.env.STORE_STUDIO_DATA = '/tmp/claude/plugins/data/store-studio-inline';
+r = await run('setup_check', { live: false });
+assert.match(r.hint, /loaded from a local folder/);
+await assert.rejects(run('asc_api_get', { path: '/v1/salesReports' }), /isn't set up\. store-studio was loaded from a local folder/);
+process.env.STORE_STUDIO_DATA = '/tmp/claude/plugins/data/store-studio-store-studio';
+r = await run('setup_check', { live: false });
+assert.ok(!/local folder/.test(r.hint), 'no folder note for a normal install');
+process.env.STORE_STUDIO_DATA = data;
+Object.assign(process.env, saved);
+
 console.log('account checks passed');

@@ -1,6 +1,6 @@
 import { AppStoreConnect } from './asc.mjs';
 import { GooglePlay } from './play.mjs';
-import { SETTINGS_HINT, StoreError, clean } from './util.mjs';
+import { SETTINGS_HINT, StoreError, clean, setupHint } from './util.mjs';
 
 // ---------------------------------------------------------------- accounts
 
@@ -57,7 +57,7 @@ export function accounts() {
 
 function pickAccount(all, account, store) {
   const names = Object.keys(all);
-  if (!names.length) throw new StoreError(`${store} isn't set up. ${SETUP_HINT}`);
+  if (!names.length) throw new StoreError(`${store} isn't set up. ${setupHint()}`);
   if (account) {
     if (!all[account]) throw new StoreError(`No ${store} account named "${account}" (set up: ${names.join(', ')})`);
     return account;

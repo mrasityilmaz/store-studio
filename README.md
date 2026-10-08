@@ -35,9 +35,13 @@ token signatures, upload parts, checksums, ordering, edit commits, dry runs,
 blocked endpoints, path tricks, key-file protection, retry rules, and that
 credentials only go to the API hosts.
 
-To try local changes, add this folder as a marketplace
-(`/plugin marketplace add ./`) and install `store-studio@store-studio`, or start
-Claude Code with `claude --plugin-dir ./plugin`.
+To try local changes in a terminal, start Claude Code with
+`claude --plugin-dir ./plugin`. A plugin loaded from a folder (that, or this
+folder added as a marketplace) runs as `store-studio@inline` and gets none of
+the settings saved for the installed `store-studio@store-studio`; the Claude
+desktop app does the same for local-folder marketplaces. To use your accounts,
+install from GitHub (`claude plugin marketplace add mrasityilmaz/store-studio`)
+or enter the settings again for the folder copy.
 
 ## License
 
